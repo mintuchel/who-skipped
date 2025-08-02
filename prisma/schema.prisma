@@ -1,0 +1,20 @@
+// Prisma가 이 TypeScript 코드에 대한 javascript 코드를 어디에 어떻게 생성할지 정의하는 블록
+generator client {
+  // provider는 Prisma가 어떤 종류의 코드를 생성할지 지정하는 필드임
+  // typescript/javascript 용 Prisma Client를 생성하는 것이기 때문에 이 값은 바꾸면 안됨(고정값임)
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(100)
+  nickname    String @unique @db.VarChar(100)
+  email       String @unique @db.VarChar(100)
+  skipped_cnt Int    @default(0)
+}
