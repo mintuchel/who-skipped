@@ -17,4 +17,43 @@ model Users {
   nickname    String @unique @db.VarChar(100)
   email       String @unique @db.VarChar(100)
   skipped_cnt Int    @default(0)
+
+  // 한 명의 유저는 여러 그룹의 그룹장이 될 수 있음
+  // Users와 Groups는 일대다 관계
+  managingGroups Groups[]
+
+  // 한 명의 유저는 여러 그룹에 속할 수 있음
+  // Users와 GroupMembership은 일대다 관계
+  groups GroupMembership[]
+
+  @@map("users")
+}
+
+model GroupMembership {
+  id Int @id @default(autoincrement())
+
+  user   Users @relation(fields: [userId], references: [id])
+  userId Int
+
+  group   Groups @relation(fields: [groupId], references: [id])
+  groupId Int
+
+  // 참여일
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, groupId])
+  @@map("group_membership")
+}
+
+model Groups {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(100)
+
+  // 모든 그룹에는 한 명의 그룹장만 존재
+  manager   Users @relation(fields: [managerId], references: [id])
+  managerId Int
+
+  users GroupMembership[]
+
+  @@map("groups")
 }
