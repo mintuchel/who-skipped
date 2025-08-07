@@ -5,6 +5,7 @@ generator client {
   provider = "prisma-client-js"
   // Prisma Client를 내가 정의한 경로에 생성하겠다는 의미
   // 보통 Prisma Client는 node_modules/.prisma/client/index.js 위치에 생성됨.
+  // 그래서 일반적인 경로에 생성되게 하는게 더 나음
   // output   = "../generated/prisma"
 }
 
