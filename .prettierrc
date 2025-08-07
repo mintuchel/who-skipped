@@ -1,12 +1,12 @@
 {
   "singleQuote": false,
   "trailingComma": "none",
-  "tabWidth": 4,
+  "tabWidth": 2,
   "editor.insertSpaces": true,
   "[javascript]": {
-    "editor.tabSize": 4
+    "editor.tabSize": 2
   },
   "[typescript]": {
-    "editor.tabSize": 4
+    "editor.tabSize": 2
   }
 }
