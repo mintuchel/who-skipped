@@ -3,7 +3,9 @@ generator client {
   // provider는 Prisma가 어떤 종류의 코드를 생성할지 지정하는 필드임
   // typescript/javascript 용 Prisma Client를 생성하는 것이기 때문에 이 값은 바꾸면 안됨(고정값임)
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  // Prisma Client를 내가 정의한 경로에 생성하겠다는 의미
+  // 보통 Prisma Client는 node_modules/.prisma/client/index.js 위치에 생성됨.
+  // output   = "../generated/prisma"
 }
 
 datasource db {
