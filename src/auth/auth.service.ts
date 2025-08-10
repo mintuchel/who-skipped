@@ -1,27 +1,45 @@
 import {
   Injectable,
   NotFoundException,
-  UnauthorizedException
+  UnauthorizedException,
+  HttpException,
+  HttpStatus
 } from "@nestjs/common";
 import { SignUpRequest } from "./../auth/dto/signup.dto";
 import { LoginRequest } from "src/auth/dto/login.dto";
 import { PrismaService } from "prisma/prisma.service";
+import { UserService } from "src/user/user.service";
 
 import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService
+  ) {}
 
   async encodePassword(password: string) {
     return await bcrypt.hash(password, 10);
   }
 
   async createUser(signUpRequest: SignUpRequest) {
+    let user = await this.prisma.users.findUnique({
+      where: { boj_name: signUpRequest.boj_name }
+    });
+
+    // 이미 해당 아이디가 존재한다면
+    if (user) {
+      throw new HttpException(
+        "이미 사용중인 아이디입니다",
+        HttpStatus.CONFLICT
+      );
+    }
+
     // password encoding
     const password = await this.encodePassword(signUpRequest.password);
 
-    const user = await this.prisma.users.create({
+    user = await this.prisma.users.create({
       data: {
         boj_name: signUpRequest.boj_name,
         password: password
