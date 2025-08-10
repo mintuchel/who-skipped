@@ -13,9 +13,8 @@ export class UserService {
     // include나 select로 관계필드 (managingGroups와 groups 까지 포함해서 반환시킬 수 도 있음)
     const user = await this.prisma.users.create({
       data: {
-        email: createUserRequest.email,
-        name: createUserRequest.name,
-        nickname: createUserRequest.nickname
+        boj_name: createUserRequest.boj_name,
+        password: createUserRequest.password
       }
     });
 
@@ -26,7 +25,7 @@ export class UserService {
     return await this.prisma.users.findMany();
   }
 
-  async getUser(id: number) {
+  async getUser(id: string) {
     const user = await this.prisma.users.findUnique({
       where: { id }
     });
@@ -38,7 +37,7 @@ export class UserService {
     return user;
   }
 
-  async deleteUser(id: number) {
+  async deleteUser(id: string) {
     return await this.prisma.users.delete({
       where: { id }
     });

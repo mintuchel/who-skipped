@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Delete,
-  ParseIntPipe
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Delete } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { CreateUserRequest } from "./dto/create-user.dto";
 
@@ -22,14 +14,20 @@ export class UserController {
     return id;
   }
 
+  @Get("")
+  getAllUsers() {
+    console.log("유저 전체 조회");
+    return this.userService.getAllUsers();
+  }
+
   @Get("/:id")
-  getUser(@Param("id", ParseIntPipe) id: number) {
+  getUser(@Param("id") id: string) {
     console.log("유저 조회");
     return this.userService.getUser(id);
   }
 
   @Delete("/:id")
-  deleteUser(@Param("id", ParseIntPipe) id: number) {
+  deleteUser(@Param("id") id: string) {
     console.log("유저 삭제");
     this.userService.deleteUser(id);
     return "유저 삭제 성공!";
