@@ -15,10 +15,9 @@ datasource db {
 }
 
 model Users {
-  id          Int    @id @default(autoincrement())
-  name        String @db.VarChar(100)
-  nickname    String @unique @db.VarChar(100)
-  email       String @unique @db.VarChar(100)
+  id          String @id @default(uuid())
+  boj_name    String @unique @db.VarChar(100)
+  password    String @db.VarChar(100)
   skipped_cnt Int    @default(0)
 
   // 한 명의 유저는 여러 그룹의 그룹장이 될 수 있음
@@ -36,10 +35,10 @@ model GroupMembership {
   id Int @id @default(autoincrement())
 
   user   Users @relation(fields: [userId], references: [id])
-  userId Int
+  userId String
 
   group   Groups @relation(fields: [groupId], references: [id])
-  groupId Int
+  groupId String
 
   // 참여일
   joinedAt DateTime @default(now())
@@ -48,13 +47,16 @@ model GroupMembership {
   @@map("group_membership")
 }
 
+// SELECT * FROM `groups`;
 model Groups {
-  id   Int    @id @default(autoincrement())
-  name String @db.VarChar(100)
+  id   String    @id @default(uuid())
+  name String @db.VarChar(100) // 그룹 이름
+
+  fine Int    @default(1000) // 벌금
 
   // 모든 그룹에는 한 명의 그룹장만 존재
   manager   Users @relation(fields: [managerId], references: [id])
-  managerId Int
+  managerId String
 
   users GroupMembership[]
 
