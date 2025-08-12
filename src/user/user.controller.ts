@@ -24,7 +24,7 @@ export class UserController {
 
   @Delete("/:boj_name")
   @ApiOperation({ summary: "특정 유저 삭제" })
-  deleteUser(@Param("id") boj_name: string) {
+  deleteUser(@Param("boj_name") boj_name: string) {
     console.log("유저 삭제");
     this.userService.deleteUser(boj_name);
     return "유저 삭제 성공!";

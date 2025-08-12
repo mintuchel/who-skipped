@@ -8,8 +8,6 @@ import { PrismaModule } from "prisma/prisma.module";
 @Module({
   controllers: [UserController],
   providers: [UserService],
-  imports: [PrismaModule],
-  // AuthService에서 UserService를 사용할 수 있게끔 exports에 선언해주기
-  exports: [UserService]
+  imports: [PrismaModule]
 })
 export class UserModule {}
