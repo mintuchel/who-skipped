@@ -30,7 +30,7 @@ export class AuthController {
   @Post("/login")
   @ApiOperation({ summary: "로그인" })
   async login(@Request() req, @Response() res) {
-    const accessToken = this.authService.login(req.user);
+    const accessToken = await this.authService.login(req.user);
     // 나중에 이 부분 interceptor로 처리해보기
     res.setHeader("Authorization", "Bearer " + accessToken);
     return res.json(accessToken);

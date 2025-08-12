@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       // 나중에 config module 사용해보기
-      secretOrKey: process.env.JWT_SECRET
+      secretOrKey: "palmercaicedofernandez"
     });
   }
 
