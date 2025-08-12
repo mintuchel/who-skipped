@@ -15,6 +15,16 @@ lerna-debug.log*
 # Prisma
 /generated/prisma
 
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# ESLint cache
+.eslintcache
+
+# Windows OS junk
+Thumbs.db
+
 # OS
 .DS_Store
 
