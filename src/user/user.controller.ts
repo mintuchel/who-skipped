@@ -15,18 +15,18 @@ export class UserController {
     return this.userService.getAllUsers();
   }
 
-  @Get("/:boj_name")
+  @Get("/:bojName")
   @ApiOperation({ summary: "특정 유저 조회" })
-  getUser(@Param("boj_name") boj_name: string) {
+  getUser(@Param("bojName") bojName: string) {
     console.log("유저 조회");
-    return this.userService.getUser(boj_name);
+    return this.userService.getUser(bojName);
   }
 
-  @Delete("/:boj_name")
+  @Delete("/:bojName")
   @ApiOperation({ summary: "특정 유저 삭제" })
-  deleteUser(@Param("boj_name") boj_name: string) {
+  deleteUser(@Param("bojName") bojName: string) {
     console.log("유저 삭제");
-    this.userService.deleteUser(boj_name);
+    this.userService.deleteUser(bojName);
     return "유저 삭제 성공!";
   }
 }
