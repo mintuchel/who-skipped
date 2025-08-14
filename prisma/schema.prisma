@@ -14,6 +14,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SubmissionResult {
+  ACCEPTED          // 맞았습니다
+  WRONG_ANSWER      // 틀렸습니다
+  TIME_LIMIT_EXCEED // 시간 초과
+  RUNTIME_ERROR     // 런타임 에러
+  COMPILE_ERROR     // 컴파일 에러
+  MEMORY_LIMIT_EXCEED // 메모리 초과
+}
+
+// 문제풀이 제출 기록
+model Submissions {
+  id Int @id @default(autoincrement())
+
+  user Users @relation(fields: [userId], references: [id])
+  userId String
+
+  problemId Int
+
+  result SubmissionResult @default(WRONG_ANSWER)
+
+  created_at DateTime
+}
+
 model Users {
   id          String @id @default(uuid())
   boj_name    String @unique @db.VarChar(100)
@@ -27,6 +50,9 @@ model Users {
   // 한 명의 유저는 여러 그룹에 속할 수 있음
   // Users와 GroupMembership은 일대다 관계
   groups GroupMembership[]
+
+  // 한 명의 유저는 여러 커밋 내역이 존재
+  submissions Submissions[]
 
   @@map("users")
 }
