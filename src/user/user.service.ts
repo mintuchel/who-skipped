@@ -17,11 +17,15 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException("User with id ${id} not found");
+      throw new NotFoundException(`User with id ${boj_name} not found`);
     }
 
     return user;
   }
+
+  // puppeteer 사용해서 크롤링
+  // 푼 문제에 대한 정보가 mongodb에 없으면 problemservice에서 문제 조회해서 mongodb에 저장
+  async getUserSubmissions(boj_name: string) {}
 
   async deleteUser(boj_name: string) {
     return await this.prisma.users.delete({
