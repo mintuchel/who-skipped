@@ -35,11 +35,4 @@ export class AuthController {
     res.setHeader("Authorization", "Bearer " + accessToken);
     return res.json(accessToken);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Get("/me")
-  @ApiOperation({ summary: "내 정보" })
-  async getProfile(@Request() req) {
-    return req.user;
-  }
 }

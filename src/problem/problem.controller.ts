@@ -1,7 +1,6 @@
-import { Body, Controller, Injectable, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
 import { ProblemService } from "./problem.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { Problem } from "./problem.schema";
 import { ProblemInfoResponse } from "./dto/response/problem-info.dto";
 
 @ApiTags("Problem")
@@ -10,7 +9,7 @@ export class ProblemController {
   constructor(private readonly problemService: ProblemService) {}
 
   @Get("")
-  @ApiOperation({ summary: "문제 전체 조회" })
+  @ApiOperation({ summary: "전체 문제 조회" })
   async getAllProblems(): Promise<ProblemInfoResponse[]> {
     return await this.problemService.findAll();
   }

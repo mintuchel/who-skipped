@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "prisma/prisma.service";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
+import { UserGroupInfo } from "./dto/response/user-group-info.dto";
+import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 
 @Injectable()
 export class UserService {
@@ -36,7 +38,19 @@ export class UserService {
     };
   }
 
-  async createGroupMembership() {}
+  async getUserGroups(payload: JwtPayload): Promise<UserGroupInfo[]> {
+    // include가 join과 유사
+    const userGroups = await this.prisma.groupMembership.findMany({
+      where: { userId: payload.id },
+      include: { group: true }
+    });
+
+    return userGroups.map((group) => ({
+      name: group.group.name,
+      manager: group.group.managerName,
+      joinedAt: group.joinedAt
+    }));
+  }
 
   // puppeteer 사용해서 크롤링
   // 푼 문제에 대한 정보가 mongodb에 없으면 problemservice에서 문제 조회해서 mongodb에 저장
