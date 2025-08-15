@@ -6,5 +6,6 @@ export class CreateGroupRequest {
   @MaxLength(100)
   name: string;
 
+  @IsNotEmpty()
   fine: number;
 }
