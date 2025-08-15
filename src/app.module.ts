@@ -4,15 +4,35 @@ import { UserModule } from "./user/user.module";
 import { AuthModule } from "./auth/auth.module";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ProblemModule } from "./problem/problem.module";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      cache: true,
+      isGlobal: true
+    }),
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>("MONGODB_URL"),
+        connectionFactory: (conn) => {
+          conn.on("connected", () => {
+            console.log("MongoDB connected");
+          });
+          conn.on("error", (err) => {
+            console.error("MongoDB connection error:", err);
+          });
+          conn.on("disconnected", () => {
+            console.warn("MongoDB disconnected");
+          });
+          return conn;
+        }
+      })
+    }),
     UserModule,
     AuthModule,
     GroupModule,
-    MongooseModule.forRoot(
-      "mongodb+srv://mintuchel:1234@cluster0.nvc5lyb.mongodb.net/who_skipped?retryWrites=true&w=majority&appName=Cluster0"
-    ),
     ProblemModule
   ]
 })
