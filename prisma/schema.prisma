@@ -72,7 +72,7 @@ model GroupMembership {
   userId String
 
   group   Groups @relation(fields: [groupId], references: [id])
-  groupId String
+  groupId Int
 
   // 참여일
   joinedAt DateTime @default(now())
@@ -83,10 +83,10 @@ model GroupMembership {
 
 // SELECT * FROM `groups`;
 model Groups {
-  id   String    @id @default(uuid())
+  id   Int       @id @default(autoincrement())
   name String    @unique @db.VarChar(100) // 그룹 이름
 
-  fine Int    @default(1000) // 벌금
+  fine Int       @default(1000) // 벌금
 
   // 모든 그룹에는 한 명의 그룹장만 존재
   manager   Users @relation(fields: [managerId], references: [id])
@@ -96,5 +96,7 @@ model Groups {
   
   users GroupMembership[]
 
+  createdAt DateTime @default(now())
+  
   @@map("groups")
 }
