@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Delete } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { UserInfoResponse } from "./dto/response/user-info.dto";
 
 @ApiTags("User")
 @Controller("users")
@@ -10,23 +11,23 @@ export class UserController {
 
   @Get("")
   @ApiOperation({ summary: "유저 전체 조회" })
-  getAllUsers() {
+  async getAllUsers(): Promise<UserInfoResponse[]> {
     console.log("유저 전체 조회");
-    return this.userService.getAllUsers();
+    return await this.userService.getAllUsers();
   }
 
   @Get("/:bojName")
   @ApiOperation({ summary: "특정 유저 조회" })
-  getUser(@Param("bojName") bojName: string) {
+  async getUser(@Param("bojName") bojName: string): Promise<UserInfoResponse> {
     console.log("유저 조회");
-    return this.userService.getUser(bojName);
+    return await this.userService.getUser(bojName);
   }
 
   @Delete("/:bojName")
   @ApiOperation({ summary: "특정 유저 삭제" })
-  deleteUser(@Param("bojName") bojName: string) {
+  async deleteUser(@Param("bojName") bojName: string) {
     console.log("유저 삭제");
-    this.userService.deleteUser(bojName);
+    await this.userService.deleteUser(bojName);
     return "유저 삭제 성공!";
   }
 }
