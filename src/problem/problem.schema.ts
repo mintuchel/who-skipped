@@ -12,10 +12,10 @@ export type ProblemDocument = HydratedDocument<Problem>;
  * MongoDB(DocumentDB)는 NoSQL로 RDBMS처럼 DB 내 정해진 스키마가 없지만
  * 코드 단에서 스키마 틀을 정의함으로써 해당 형식대로 저장되도록 할 수 있다.
  */
-@Schema()
+@Schema({ versionKey: false })
 export class Problem {
   @Prop({ required: true, unique: true })
-  problemId: string;
+  problemId: number;
 
   @Prop({ required: true })
   title: string;
@@ -25,3 +25,18 @@ export class Problem {
 }
 
 export const ProblemSchema = SchemaFactory.createForClass(Problem);
+
+/**
+ * @Schema({
+  versionKey: false,
+  timestamps: true,
+  collection: 'problems',
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+    }
+  }
+})
+ */
