@@ -15,12 +15,17 @@ datasource db {
 }
 
 enum SubmissionResult {
-  ACCEPTED          // 맞았습니다
+  ACCEPTED         // 맞았습니다
   WRONG_ANSWER      // 틀렸습니다
   TIME_LIMIT_EXCEED // 시간 초과
   RUNTIME_ERROR     // 런타임 에러
   COMPILE_ERROR     // 컴파일 에러
   MEMORY_LIMIT_EXCEED // 메모리 초과
+}
+
+enum Role{
+  ADMIN
+  USER
 }
 
 // 문제풀이 제출 기록
@@ -35,6 +40,8 @@ model Submissions {
   result SubmissionResult @default(WRONG_ANSWER)
 
   created_at DateTime
+
+  @@map("submissions")
 }
 
 model Users {
@@ -42,7 +49,8 @@ model Users {
   boj_name    String @unique @db.VarChar(100)
   password    String @db.VarChar(100)
   skipped_cnt Int    @default(0)
-
+  role        Role   @default(USER)
+  
   // 한 명의 유저는 여러 그룹의 그룹장이 될 수 있음
   // Users와 Groups는 일대다 관계
   managingGroups Groups[]
@@ -76,14 +84,16 @@ model GroupMembership {
 // SELECT * FROM `groups`;
 model Groups {
   id   String    @id @default(uuid())
-  name String @db.VarChar(100) // 그룹 이름
+  name String    @unique @db.VarChar(100) // 그룹 이름
 
   fine Int    @default(1000) // 벌금
 
   // 모든 그룹에는 한 명의 그룹장만 존재
   manager   Users @relation(fields: [managerId], references: [id])
-  managerId String
+  managerId String 
 
+  managerName String @db.VarChar(100) // 매니저 이름
+  
   users GroupMembership[]
 
   @@map("groups")
