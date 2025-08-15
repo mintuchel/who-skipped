@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { PassportStrategy } from "@nestjs/passport";
-import { Payload } from "../payload.interface";
+import { JwtPayload } from "../payload/jwt.payload";
+import { ConfigService } from "@nestjs/config";
 
 // 나는 JWT 방식을 사용하는 것이므로 PassportStrategy에 passport-jwt에서 import한 JWT에 맞는 Strategy 타입을 정의
 // 그리고 JWT Strategy가 필요한 스펙들을 생성자로 전달
 // 각 Strategy들마다 필요한 스펙들은 정해져있음
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // 나중에 config module 사용해보기
-      secretOrKey: "palmercaicedofernandez"
+      secretOrKey: configService.get<string>("JWT_SECRET")!
     });
   }
 
@@ -22,7 +22,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
   // 이 validate 함수 내에서 직접 해줘야함.
   // 따라서 authService에 접근해서 다른 코드를 호출할 수 도 있음.
   // 여기서는 일단 추가적인 작업안하고 그대로 return만 해주기
-  async validate(payload: Payload) {
-    return { id: payload.id, boj_name: payload.boj_name };
+
+  // 여기서 return된 Payload 타입이 req.user로 들어가는 것임!
+  async validate(payload: JwtPayload): Promise<JwtPayload> {
+    return { id: payload.id, boj_name: payload.boj_name, role: payload.role };
   }
 }

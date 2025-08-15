@@ -8,9 +8,8 @@ import {
 import { SignUpRequest } from "./../auth/dto/signup.dto";
 import { PrismaService } from "prisma/prisma.service";
 import { JwtService } from "@nestjs/jwt";
-import { Payload } from "./security/payload.interface";
 import * as bcrypt from "bcrypt";
-import { Users } from "@prisma/client";
+import { LocalPayload } from "./security/payload/local.payload";
 
 @Injectable()
 export class AuthService {
@@ -19,7 +18,7 @@ export class AuthService {
     private readonly jwtService: JwtService
   ) {}
 
-  private async encodePassword(password: string) {
+  private async encodePassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
   }
 
@@ -50,10 +49,12 @@ export class AuthService {
     return user;
   }
 
-  // Local-Guard에서 활용하는 함수
-  // 로그인 요청시에만 호출되며 이 함수를 통해 허가된 사용자에게
-  // access token을 발급해준다
-  async validateUser(boj_name: string, password: string) {
+  // local-strategy의 validate 함수에서 사용되는 함수
+  // LocalPayload 타입을 return
+  async validateUser(
+    boj_name: string,
+    password: string
+  ): Promise<LocalPayload> {
     const user = await this.prisma.users.findUnique({
       where: { boj_name: boj_name }
     });
@@ -69,13 +70,16 @@ export class AuthService {
       throw new UnauthorizedException("비밀번호가 옳지 않습니다");
     }
 
-    return user;
+    return {
+      id: user.id,
+      boj_name: user.boj_name,
+      role: user.role
+    };
   }
 
-  // Guard의 validate 함수가 return해준 User 객체 사용
-  async login(user: Users) {
-    const payload: Payload = { id: user.id, boj_name: user.boj_name };
-    // passport-jwt의 jwtService를 사용해서 access token 발급해서 return
-    return this.jwtService.sign(payload);
+  // Guard의 validate 함수가 request에 넣어준 LocalPayload 타입을 인자로 받아 서명
+  // passport-jwt의 jwtService를 사용해서 access token 발급해서 return
+  async login(localPayload: LocalPayload): Promise<string> {
+    return this.jwtService.sign(localPayload);
   }
 }
