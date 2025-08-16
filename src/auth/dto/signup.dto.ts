@@ -6,7 +6,7 @@ export class SignUpRequest {
   @IsNotEmpty()
   @MaxLength(100)
   @ApiProperty({ example: "mintuchel", description: "백준 아이디" })
-  boj_name: string;
+  name: string;
 
   @IsString()
   @IsNotEmpty()

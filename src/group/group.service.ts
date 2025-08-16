@@ -21,8 +21,7 @@ export class GroupService {
     const group = await this.prisma.groups.create({
       data: {
         name: createGroupRequest.name,
-        fine: createGroupRequest.fine,
-        managerName: payload.boj_name,
+        managerName: payload.name,
         manager: {
           connect: { id: payload.id }
         }
@@ -39,7 +38,6 @@ export class GroupService {
     return groups.map((group) => ({
       name: group.name,
       manager: group.managerName,
-      fine: group.fine,
       created_at: group.createdAt
     }));
   }
@@ -57,7 +55,6 @@ export class GroupService {
     return {
       name: group.name,
       manager: group.managerName,
-      fine: group.fine,
       created_at: group.createdAt
     };
   }
@@ -76,16 +73,17 @@ export class GroupService {
       throw new NotFoundException(groupId + " 그룹을 찾을 수 없습니다");
     }
 
-    if (group.managerName !== payload.boj_name) {
+    if (group.managerName !== payload.name) {
       throw new UnauthorizedException("해당 그룹의 매니저가 아닙니다");
     }
 
     // id들만 조회
     const users = await this.prisma.users.findMany({
-      where: { boj_name: { in: request.bojNameList } },
+      where: { name: { in: request.names } },
       select: { id: true }
     });
 
+    // 이거 나중에 createMany로 바꿔보기
     for (const user of users) {
       await this.prisma.groupMembership
         .create({

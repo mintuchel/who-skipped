@@ -24,7 +24,7 @@ export class AuthService {
 
   async createUser(signUpRequest: SignUpRequest) {
     let user = await this.prisma.users.findUnique({
-      where: { boj_name: signUpRequest.boj_name }
+      where: { name: signUpRequest.name }
     });
 
     // 이미 해당 아이디가 존재한다면
@@ -40,7 +40,7 @@ export class AuthService {
 
     user = await this.prisma.users.create({
       data: {
-        boj_name: signUpRequest.boj_name,
+        name: signUpRequest.name,
         password: password
       }
     });
@@ -51,12 +51,9 @@ export class AuthService {
 
   // local-strategy의 validate 함수에서 사용되는 함수
   // LocalPayload 타입을 return
-  async validateUser(
-    boj_name: string,
-    password: string
-  ): Promise<LocalPayload> {
+  async validateUser(name: string, password: string): Promise<LocalPayload> {
     const user = await this.prisma.users.findUnique({
-      where: { boj_name: boj_name }
+      where: { name: name }
     });
 
     if (!user) {
@@ -72,7 +69,7 @@ export class AuthService {
 
     return {
       id: user.id,
-      boj_name: user.boj_name,
+      name: user.name,
       role: user.role
     };
   }

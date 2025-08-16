@@ -4,5 +4,5 @@ export class AddUsersToGroupRequest {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  bojNameList: string[];
+  names: string[];
 }

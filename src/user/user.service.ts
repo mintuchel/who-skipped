@@ -15,25 +15,25 @@ export class UserService {
     const users = await this.prisma.users.findMany();
 
     return users.map((user) => ({
-      bojName: user.boj_name,
-      skippedCnt: user.skipped_cnt,
+      name: user.name,
+      skippedCnt: user.skippedCnt,
       role: user.role
     }));
   }
 
   // password 정보 빼고만 보내주기
-  async getUser(bojName: string): Promise<UserInfoResponse> {
+  async getUser(name: string): Promise<UserInfoResponse> {
     const user = await this.prisma.users.findUnique({
-      where: { boj_name: bojName }
+      where: { name: name }
     });
 
     if (!user) {
-      throw new NotFoundException(bojName + " 사용자를 찾을 수 없습니다");
+      throw new NotFoundException(name + " 사용자를 찾을 수 없습니다");
     }
 
     return {
-      bojName: user.boj_name,
-      skippedCnt: user.skipped_cnt,
+      name: user.name,
+      skippedCnt: user.skippedCnt,
       role: user.role
     };
   }
@@ -50,12 +50,5 @@ export class UserService {
       manager: group.group.managerName,
       joinedAt: group.joinedAt
     }));
-  }
-
-  async deleteUser(bojName: string) {
-    // delete는 삭제된 레코드 전체를 반환
-    return await this.prisma.users.delete({
-      where: { boj_name: bojName }
-    });
   }
 }

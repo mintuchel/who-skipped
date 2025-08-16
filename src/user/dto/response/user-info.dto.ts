@@ -1,5 +1,5 @@
 export interface UserInfoResponse {
-  bojName: string;
+  name: string;
   skippedCnt: number;
   role: string;
 }

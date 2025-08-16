@@ -10,18 +10,15 @@ import { LocalPayload } from "./../payload/local.payload";
 export class LocalStrategy extends PassportStrategy(Strategy, "local") {
   constructor(private readonly authService: AuthService) {
     super({
-      usernameField: "boj_name",
+      usernameField: "name",
       passwordField: "password"
     });
   }
 
   // HTTP Request Body를 자동으로 파싱해서 매개변수들과 매핑해줌
   // validate에서 LocalPayload 타입을 req.user에 넣어줌
-  async validate(boj_name: string, password: string): Promise<LocalPayload> {
-    const localPayload = await this.authService.validateUser(
-      boj_name,
-      password
-    );
+  async validate(name: string, password: string): Promise<LocalPayload> {
+    const localPayload = await this.authService.validateUser(name, password);
     return localPayload;
   }
 }

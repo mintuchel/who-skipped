@@ -40,19 +40,10 @@ export class UserController {
     return req.user;
   }
 
-  @Delete("/me")
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "회원 탈퇴" })
-  async deleteUser(@Param("bojName") bojName: string) {
-    console.log("유저 삭제");
-    await this.userService.deleteUser(bojName);
-    return "유저 삭제 성공!";
-  }
-
-  @Get("/:bojName")
+  @Get("/:name")
   @ApiOperation({ summary: "특정 유저 조회" })
-  async getUser(@Param("bojName") bojName: string): Promise<UserInfoResponse> {
+  async getUser(@Param("name") name: string): Promise<UserInfoResponse> {
     console.log("유저 조회");
-    return await this.userService.getUser(bojName);
+    return await this.userService.getUser(name);
   }
 }

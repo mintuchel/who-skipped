@@ -25,6 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
 
   // 여기서 return된 Payload 타입이 req.user로 들어가는 것임!
   async validate(payload: JwtPayload): Promise<JwtPayload> {
-    return { id: payload.id, boj_name: payload.boj_name, role: payload.role };
+    return { id: payload.id, name: payload.name, role: payload.role };
   }
 }
