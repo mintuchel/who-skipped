@@ -32,14 +32,23 @@ enum Role{
 model Submissions {
   id Int @id @default(autoincrement())
 
-  user Users @relation(fields: [userId], references: [id])
-  userId String
+  solutionId Int
+  
+  user Users @relation(fields: [bojName], references: [boj_name])
+  bojName String
 
   problemId Int
 
   result SubmissionResult @default(WRONG_ANSWER)
 
-  created_at DateTime
+  memory Int
+  time Int
+  language String
+  codeLength Int
+
+  submissionTime String
+
+  created_at DateTime @default(now())
 
   @@map("submissions")
 }
