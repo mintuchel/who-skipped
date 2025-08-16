@@ -6,7 +6,7 @@ import {
   UseGuards,
   Request
 } from "@nestjs/common";
-import { Submission, UserService } from "./user.service";
+import { UserService } from "./user.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
@@ -23,13 +23,6 @@ export class UserController {
   async getAllUsers(): Promise<UserInfoResponse[]> {
     console.log("유저 전체 조회");
     return await this.userService.getAllUsers();
-  }
-
-  @Get("/me/submissions")
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "특정 유저 제출 내역 조회" })
-  async getUserSubmissions(@Request() req): Promise<Submission[]> {
-    return await this.userService.getUserSubmissions(req.user);
   }
 
   @Get("/me/groups")

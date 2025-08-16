@@ -3,18 +3,6 @@ import { PrismaService } from "prisma/prisma.service";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
-import puppeteer from "puppeteer-core";
-
-export interface Submission {
-  solutionId: string;
-  problemId: string;
-  result: string;
-  memory: string;
-  time: string;
-  language: string;
-  codeLength: string;
-  submissionTime: string;
-}
 
 @Injectable()
 export class UserService {
@@ -69,58 +57,5 @@ export class UserService {
     return await this.prisma.users.delete({
       where: { boj_name: bojName }
     });
-  }
-
-  // puppeteer 사용해서 크롤링
-  // 푼 문제에 대한 정보가 mongodb에 없으면 problemservice에서 문제 조회해서 mongodb에 저장
-  async getUserSubmissions(payload: JwtPayload): Promise<Submission[]> {
-    const userId = payload.boj_name;
-
-    const browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      executablePath:
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    });
-
-    const page = await browser.newPage();
-
-    await page.goto(
-      `https://www.acmicpc.net/status?problem_id=&user_id=${userId}&language_id=-1&result_id=-1`,
-      { waitUntil: "domcontentloaded" }
-    );
-
-    // puppeteer의 evaludate은 브라우저 안에서 코드를 실행하게 해주는 함수
-    // html을 파싱하는 작업은 이 함수 안에서 해야함
-    const submissions = await page.evaluate(() => {
-      // 1. 모든 <tbody> 요소를 선택
-      const tbodyElements = document.querySelectorAll("tbody");
-
-      return Array.from(tbodyElements)
-        .map((tbody) => {
-          const rows = tbody.querySelectorAll("tr");
-          return Array.from(rows).map((row) => {
-            const cells = row.querySelectorAll("td");
-            return {
-              solutionId: cells[0]?.innerText || "",
-              problemId: cells[2]?.querySelector("a")?.innerText || "",
-              result: cells[3]?.querySelector("span")?.innerText || "",
-              memory: cells[4]?.innerText || "",
-              time: cells[5]?.innerText || "",
-              language: cells[6]?.innerText || "",
-              codeLength: cells[7]?.innerText || "",
-              submissionTime:
-                cells[8]
-                  ?.querySelector("a")
-                  ?.getAttribute("data-original-title") || ""
-            };
-          });
-        })
-        .flat();
-    });
-
-    await browser.close();
-
-    return submissions;
   }
 }
