@@ -6,9 +6,10 @@ import {
   UseGuards,
   Request
 } from "@nestjs/common";
-import { UserService } from "./user.service";
+import { Submission, UserService } from "./user.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
+import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
 
 @ApiTags("User")
@@ -24,10 +25,17 @@ export class UserController {
     return await this.userService.getAllUsers();
   }
 
-  @Get("/groups")
+  @Get("/me/submissions")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "특정 유저 제출 내역 조회" })
+  async getUserSubmissions(@Request() req): Promise<Submission[]> {
+    return await this.userService.getUserSubmissions(req.user);
+  }
+
+  @Get("/me/groups")
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "특정 유저 그룹 조회" })
-  async getUserGroups(@Request() req) {
+  async getUserGroups(@Request() req): Promise<UserGroupInfo[]> {
     console.log("특정 유저 그룹 조회");
     return await this.userService.getUserGroups(req.user);
   }
@@ -39,19 +47,19 @@ export class UserController {
     return req.user;
   }
 
+  @Delete("/me")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "회원 탈퇴" })
+  async deleteUser(@Param("bojName") bojName: string) {
+    console.log("유저 삭제");
+    await this.userService.deleteUser(bojName);
+    return "유저 삭제 성공!";
+  }
+
   @Get("/:bojName")
   @ApiOperation({ summary: "특정 유저 조회" })
   async getUser(@Param("bojName") bojName: string): Promise<UserInfoResponse> {
     console.log("유저 조회");
     return await this.userService.getUser(bojName);
-  }
-
-  @Delete("/:bojName")
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "회원탈퇴" })
-  async deleteUser(@Param("bojName") bojName: string) {
-    console.log("유저 삭제");
-    await this.userService.deleteUser(bojName);
-    return "유저 삭제 성공!";
   }
 }

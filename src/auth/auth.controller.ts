@@ -11,7 +11,6 @@ import {
 import { AuthService } from "./auth.service";
 import { SignUpRequest } from "./dto/signup.dto";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
-import { JwtAuthGuard } from "./security/guard/jwt.guard";
 import { LocalAuthGuard } from "./security/guard/local.guard";
 
 @ApiTags("Authorization")
