@@ -11,11 +11,11 @@ export class SubmissionService {
   private async getAllUsers(): Promise<string[]> {
     const users = await this.prisma.users.findMany({
       select: {
-        boj_name: true
+        name: true
       }
     });
 
-    return users.map((user) => user.boj_name);
+    return users.map((user) => user.name);
   }
 
   private mapResultToSubmissionResult(result: string): SubmissionResult {
@@ -42,7 +42,7 @@ export class SubmissionService {
   private async saveSubmissions(submissions: Submission[]) {
     await this.prisma.submissions.createMany({
       data: submissions.map((submission) => ({
-        bojName: submission.bojName,
+        name: submission.name,
         solutionId: submission.solutionId,
         problemId: submission.problemId,
         result: this.mapResultToSubmissionResult(submission.result),
@@ -50,14 +50,14 @@ export class SubmissionService {
         time: submission.time,
         language: submission.language,
         codeLength: submission.codeLength,
-        submissionTime: submission.submissionTime
+        submittedAt: new Date(submission.submittedAt)
       }))
     });
   }
 
   // puppeteer 사용해서 크롤링
   // 푼 문제에 대한 정보가 mongodb에 없으면 problemservice에서 문제 조회해서 mongodb에 저장
-  async getUserSubmissions() {
+  async getUserSubmissions(): Promise<string> {
     const userIdList = await this.getAllUsers();
 
     const browser = await puppeteer.launch({
@@ -88,9 +88,20 @@ export class SubmissionService {
               // 한 개의 cell 추출
               const cells = row.querySelectorAll("td");
 
+              // timestamp 값 파싱
+              const timestamp = parseInt(
+                cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
+                  ""
+              );
+
+              // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
+              const submittedAt = new Date(timestamp * 1000)
+                .toISOString()
+                .split("T")[0];
+
               return {
                 solutionId: parseInt(cells[0].innerText),
-                bojName: cells[1].innerText,
+                name: cells[1].innerText,
                 problemId:
                   parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
                 result: cells[3].querySelector("span")?.innerText || "",
@@ -98,10 +109,7 @@ export class SubmissionService {
                 time: parseInt(cells[5].innerText) || 0,
                 language: cells[6].innerText || "",
                 codeLength: parseInt(cells[7].innerText) || 0,
-                submissionTime:
-                  cells[8]
-                    .querySelector("a")
-                    ?.getAttribute("data-original-title") || ""
+                submittedAt: submittedAt
               };
             });
           })
@@ -114,5 +122,20 @@ export class SubmissionService {
     await browser.close();
 
     return "제출 내역 크롤링 성공";
+  }
+
+  async deleteSubmissions() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    await this.prisma.submissions.deleteMany({
+      where: {
+        submittedAt: {
+          lt: thirtyDaysAgo // 30일 전 이전 데이터 삭제
+        }
+      }
+    });
+
+    return "한 달 전 내역 삭제 성공";
   }
 }
