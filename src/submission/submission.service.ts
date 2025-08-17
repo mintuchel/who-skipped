@@ -1,12 +1,30 @@
 import { Injectable } from "@nestjs/common";
 import { Submission } from "./submission.schema";
-import puppeteer from "puppeteer-core";
+import { SubmissionInfoResponse } from "./dto/response/submission-info.dto";
 import { SubmissionResult } from "@prisma/client";
 import { PrismaService } from "prisma/prisma.service";
+import puppeteer from "puppeteer-core";
 
 @Injectable()
 export class SubmissionService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // 전체 제출내역 조회
+  async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {
+    // solutionId 내림차순으로 정렬하여 반환
+    // solutionId로 정렬하는게 날짜로 정렬하는 것이니까
+    const submissions = await this.prisma.submissions.findMany({
+      orderBy: {
+        solutionId: "desc"
+      }
+    });
+
+    // bigint를 json.stringfy 못해서 toString으로 바꿔서 넘기기
+    return submissions.map((sub) => ({
+      ...sub,
+      solutionId: sub.solutionId.toString()
+    }));
+  }
 
   private async getAllUsers(): Promise<string[]> {
     const users = await this.prisma.users.findMany({
@@ -38,18 +56,20 @@ export class SubmissionService {
   }
 
   // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
-  // connect를 안써도 된다
+  // connect를 사용하지 않더라도 연관관계 매핑이 된다
   private async saveSubmissions(submissions: Submission[]) {
     await this.prisma.submissions.createMany({
       data: submissions.map((submission) => ({
         name: submission.name,
         solutionId: submission.solutionId,
         problemId: submission.problemId,
+        // enum 값으로 매핑
         result: this.mapResultToSubmissionResult(submission.result),
         memory: submission.memory,
         time: submission.time,
         language: submission.language,
         codeLength: submission.codeLength,
+        // String 값을 Date 형으로 변환해서 저장
         submittedAt: new Date(submission.submittedAt)
       }))
     });
@@ -100,7 +120,8 @@ export class SubmissionService {
                 .split("T")[0];
 
               return {
-                solutionId: parseInt(cells[0].innerText),
+                // solutionId는 BigInt로 파싱해주어야함
+                solutionId: BigInt(cells[0].innerText),
                 name: cells[1].innerText,
                 problemId:
                   parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
