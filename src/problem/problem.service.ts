@@ -4,6 +4,7 @@ import { Problem } from "./problem.schema";
 import { Model } from "mongoose";
 import axios from "axios";
 import { ProblemInfoResponse } from "./dto/response/problem-info.dto";
+import { PrismaService } from "prisma/prisma.service";
 
 @Injectable()
 export class ProblemService {
@@ -12,7 +13,8 @@ export class ProblemService {
   // 타입스크립트의 컴파일 타임때 막아줄 수 있도록 타입 선언을 일반 자료형으로 함.
   constructor(
     @InjectModel(Problem.name)
-    private readonly problemModel: Model<Problem>
+    private readonly problemModel: Model<Problem>,
+    private readonly prisma: PrismaService
   ) {}
 
   private readonly BASE_URL = "https://solved.ac/api/v3/problem/show";
@@ -24,7 +26,7 @@ export class ProblemService {
     // 해당 문제가 존재하지 않는다면 solvedac api를 통해 정보 가져오기
     if (!problem) {
       console.log("해당 문제 존재하지 않음!");
-      const problemInfo = await this.getProblemInfo(problemId);
+      const problemInfo = await this.fetchProblemInfoBySolvedAC(problemId);
       problem = await this.problemModel.insertOne(problemInfo);
     }
 
@@ -35,7 +37,38 @@ export class ProblemService {
     };
   }
 
-  // 전체 조회
+  // Submissions에 등록된 문제에 대한 정보 SolvedAC API로 받아오기
+  async getProblemsInSubmissions(): Promise<number> {
+    const problemIdRecords = await this.prisma.submissions.findMany({
+      distinct: ["problemId"],
+      select: {
+        problemId: true
+      }
+    });
+
+    const problemIdList: number[] = problemIdRecords.map(
+      (item) => item.problemId
+    );
+
+    let problemInfoList: Problem[] = [];
+
+    for (const id of problemIdList) {
+      const info: Problem = await this.fetchProblemInfoBySolvedAC(id);
+      problemInfoList.push(info);
+    }
+
+    // API 요청 병렬 처리?
+    // const problemInfoList: Problem[] = await Promise.all(
+    //   problemIdList.map((id) => this.fetchProblemInfoBySolvedAC(id))
+    // );
+
+    await this.problemModel.create(problemInfoList);
+
+    console.log(problemIdList.length + "개의 문제가 추가되었습니다");
+    return problemIdList.length;
+  }
+
+  // 전체 문제 조회
   async findAll(): Promise<ProblemInfoResponse[]> {
     const problems = await this.problemModel.find().exec();
 
@@ -47,7 +80,9 @@ export class ProblemService {
   }
 
   // solvedac api를 통해 문제 정보 가져오기
-  private async getProblemInfo(problemId: number) {
+  private async fetchProblemInfoBySolvedAC(
+    problemId: number
+  ): Promise<Problem> {
     try {
       const response = await axios.get(this.BASE_URL, {
         params: { problemId }
