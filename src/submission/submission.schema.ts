@@ -1,5 +1,5 @@
 export interface Submission {
-  solutionId: number;
+  solutionId: bigint;
   name: string;
   problemId: number;
   result: string;
