@@ -111,48 +111,69 @@ export class SubmissionService {
         { waitUntil: "domcontentloaded" }
       );
 
-      // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
-      // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
-      const submissions = await page.evaluate(() => {
-        // 모든 제출내역 Row 선택
-        const submissionRows = document.querySelectorAll("tbody tr");
+      while (1) {
+        // 한 달 전 기록 index
+        const count = await page.evaluate(() => {
+          const oneMonthAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60; // 30일 전 timestamp
 
-        console.log(submissionRows);
+          // 이미 최신순으로 정렬된 배열 반환
+          const timestamps = Array.from(
+            document.querySelectorAll("a.real-time-update")
+          ).map((a) => parseInt(a.getAttribute("data-timestamp") || "0"));
 
-        return Array.from(submissionRows).map((row) => {
-          // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
-          const cells = row.querySelectorAll("td");
-
-          console.log(cells);
-
-          // timestamp 값 파싱
-          const timestamp = parseInt(
-            cells[8].querySelector("a")?.getAttribute("data-timestamp") || ""
-          );
-
-          // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
-          const submittedAt = new Date(timestamp * 1000)
-            .toISOString()
-            .split("T")[0];
-
-          return {
-            // JS Number는 9e15까지 안전함
-            // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
-            solutionId: parseInt(cells[0].innerText),
-            name: cells[1].innerText,
-            problemId:
-              parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
-            result: cells[3].querySelector("span")?.innerText || "",
-            memory: parseInt(cells[4]?.innerText || "0") || 0,
-            time: parseInt(cells[5]?.innerText || "0") || 0,
-            language: cells[6].innerText || "",
-            codeLength: parseInt(cells[7].innerText) || 0,
-            submittedAt: submittedAt
-          };
+          // 한 달 전 제출내역에 대한 개수 반환
+          // 기존 배열이 정렬되어있으므로 filter된 배열도 정렬되어있음
+          return timestamps.filter((ts) => ts >= oneMonthAgo).length;
         });
-      });
 
-      await this.saveSubmissions(submissions);
+        // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
+        // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
+        const submissions = await page.evaluate((count) => {
+          // 모든 제출내역 Row 선택
+          const submissionRows = document.querySelectorAll("tbody tr");
+
+          return Array.from(submissionRows)
+            .slice(0, count) // 0부터 count-1 원소까지 축소
+            .map((row) => {
+              // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
+              const cells = row.querySelectorAll("td");
+
+              // timestamp 값 파싱
+              const timestamp = parseInt(
+                cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
+                  ""
+              );
+
+              // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
+              const submittedAt = new Date(timestamp * 1000)
+                .toISOString()
+                .split("T")[0];
+
+              return {
+                // JS Number는 9e15까지 안전함
+                // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
+                solutionId: parseInt(cells[0].innerText),
+                name: cells[1].innerText,
+                problemId:
+                  parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
+                result: cells[3].querySelector("span")?.innerText || "",
+                memory: parseInt(cells[4]?.innerText || "0") || 0,
+                time: parseInt(cells[5]?.innerText || "0") || 0,
+                language: cells[6].innerText || "",
+                codeLength: parseInt(cells[7].innerText) || 0,
+                submittedAt: submittedAt
+              };
+            });
+        }, count);
+
+        await this.saveSubmissions(submissions);
+
+        // 이번 페이지에서 끝났으면 크롤링 종료
+        if (count < 20) break;
+
+        // 아니면 다음 페이지까지 넘어가서 계속 진행
+        await page.click("#next_page");
+      }
     }
 
     await browser.close();
