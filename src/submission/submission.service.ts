@@ -5,6 +5,8 @@ import { SubmissionResult } from "@prisma/client";
 import { PrismaService } from "prisma/prisma.service";
 import puppeteer from "puppeteer-core";
 
+// 최근 30일간까지만 스크롤
+
 @Injectable()
 export class SubmissionService {
   constructor(private readonly prisma: PrismaService) {}
@@ -94,6 +96,7 @@ export class SubmissionService {
     const userIdList = await this.getAllUsers();
 
     const browser = await puppeteer.launch({
+      // headless: false하면 크롤링 창 보임
       headless: false,
       defaultViewport: null,
       executablePath:
@@ -111,44 +114,42 @@ export class SubmissionService {
       // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
       // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
       const submissions = await page.evaluate(() => {
-        // tbody 요소 선택
-        const tbodyElements = document.querySelectorAll("tbody");
+        // 모든 제출내역 Row 선택
+        const submissionRows = document.querySelectorAll("tbody tr");
 
-        return Array.from(tbodyElements)
-          .map((tbody) => {
-            const rows = tbody.querySelectorAll("tr");
-            return Array.from(rows).map((row) => {
-              // 한 개의 cell 추출
-              const cells = row.querySelectorAll("td");
+        console.log(submissionRows);
 
-              // timestamp 값 파싱
-              const timestamp = parseInt(
-                cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
-                  ""
-              );
+        return Array.from(submissionRows).map((row) => {
+          // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
+          const cells = row.querySelectorAll("td");
 
-              // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
-              const submittedAt = new Date(timestamp * 1000)
-                .toISOString()
-                .split("T")[0];
+          console.log(cells);
 
-              return {
-                // JS Number는 9e15까지 안전함
-                // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
-                solutionId: parseInt(cells[0].innerText),
-                name: cells[1].innerText,
-                problemId:
-                  parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
-                result: cells[3].querySelector("span")?.innerText || "",
-                memory: parseInt(cells[4]?.innerText || "0") || 0,
-                time: parseInt(cells[5]?.innerText || "0") || 0,
-                language: cells[6].innerText || "",
-                codeLength: parseInt(cells[7].innerText) || 0,
-                submittedAt: submittedAt
-              };
-            });
-          })
-          .flat();
+          // timestamp 값 파싱
+          const timestamp = parseInt(
+            cells[8].querySelector("a")?.getAttribute("data-timestamp") || ""
+          );
+
+          // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
+          const submittedAt = new Date(timestamp * 1000)
+            .toISOString()
+            .split("T")[0];
+
+          return {
+            // JS Number는 9e15까지 안전함
+            // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
+            solutionId: parseInt(cells[0].innerText),
+            name: cells[1].innerText,
+            problemId:
+              parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
+            result: cells[3].querySelector("span")?.innerText || "",
+            memory: parseInt(cells[4]?.innerText || "0") || 0,
+            time: parseInt(cells[5]?.innerText || "0") || 0,
+            language: cells[6].innerText || "",
+            codeLength: parseInt(cells[7].innerText) || 0,
+            submittedAt: submittedAt
+          };
+        });
       });
 
       await this.saveSubmissions(submissions);
