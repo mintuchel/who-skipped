@@ -14,6 +14,7 @@ export type ProblemDocument = HydratedDocument<Problem>;
  */
 @Schema({ versionKey: false })
 export class Problem {
+  // 이게 unique로 정의되어 있어 동일한 problemId에 해당하는 Problem 저장 시 dupulicate key error가 발생함
   @Prop({ required: true, unique: true })
   problemId: number;
 

@@ -39,33 +39,38 @@ export class ProblemService {
 
   // Submissions에 등록된 문제에 대한 정보 SolvedAC API로 받아오기
   async getProblemsInSubmissions(): Promise<number> {
+    // 이미 문제정보가 있는 것 받기
+    const existingProblemIdList: number[] =
+      await this.problemModel.distinct("problemId");
+
+    // 문제정보 없는 것들만 추리기
     const problemIdRecords = await this.prisma.submissions.findMany({
       distinct: ["problemId"],
+      where: {
+        problemId: {
+          notIn: existingProblemIdList
+        }
+      },
       select: {
         problemId: true
       }
     });
 
-    const problemIdList: number[] = problemIdRecords.map(
-      (item) => item.problemId
+    // Promise.all을 통해 병렬 처리
+    // 서로 관계가 없고 순서가 중요하지 않으므로
+    // Promise.all의 return 값은 항상 배열 (여러 Promise들의 결과를 반환하므로)
+    const problemInfoList: Problem[] = await Promise.all(
+      problemIdRecords.map((records) =>
+        this.fetchProblemInfoBySolvedAC(records.problemId)
+      )
     );
 
-    let problemInfoList: Problem[] = [];
+    // create보다 insertMany가 성능적으로 훨씬 좋다
+    // ordered:false를 통해 오류가 나도 무시하고 계속 진행
+    await this.problemModel.insertMany(problemInfoList, { ordered: false });
 
-    for (const id of problemIdList) {
-      const info: Problem = await this.fetchProblemInfoBySolvedAC(id);
-      problemInfoList.push(info);
-    }
-
-    // API 요청 병렬 처리?
-    // const problemInfoList: Problem[] = await Promise.all(
-    //   problemIdList.map((id) => this.fetchProblemInfoBySolvedAC(id))
-    // );
-
-    await this.problemModel.create(problemInfoList);
-
-    console.log(problemIdList.length + "개의 문제가 추가되었습니다");
-    return problemIdList.length;
+    console.log(problemIdRecords.length + "개의 새로운 문제가 추가되었습니다");
+    return problemIdRecords.length;
   }
 
   // 전체 문제 조회
