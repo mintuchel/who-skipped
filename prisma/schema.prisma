@@ -30,11 +30,12 @@ enum Role{
 
 enum Tag{
   MAZE_RUNNER // 메이즈러너 - BFS DFS 문제 해결
+  HANZEL_AND_GRETEL // 헨젤과그레텔 - 백트래킹 문제 해결
   ARCHIMEDES // 아르키메데스 - 수학 해결
   OPTIMIZER // 최적화의 달인 - DP 해결
   HEAD_FIRST// 맨땅에 헤딩 - 브루트포스 해결
   ZERO_TO_HERO // 무에서유 - 구현 해결
-  BOY_SCOUT // 그래프 문제 해결
+  BOY_SCOUT // 그래프 문제 해결 -> 탐색 해결?
   PRO_FINESSE  // 해결사 - 문제 30개 해결
   HARD_WORKER // 하드워커 - 10일 연속 문제풀이 시도
   TIME_KEEPER // 시간의 지배자 - 시간초과 10개 이상
@@ -46,9 +47,9 @@ model Submissions {
   // 20억개를 넘을 일은 없음!
   id Int @id @default(autoincrement())
 
-  // 백준에서 지정된 값 20억을 넘을 수 있음
+  // 백준에서 지정된 값 40억을 넘을 수 있음
   // 특정 날짜 이전것을 삭제할때 이거 사용하면 됨
-  solutionId BigInt
+  solutionId Int @db.UnsignedInt
   
   user Users @relation(fields: [name], references: [name])
   name String
@@ -57,8 +58,10 @@ model Submissions {
 
   result SubmissionResult @default(WRONG_ANSWER)
 
-  memory Int
-  time Int
+  // memory는 UnsignedSmallInt(65,000)은 넘음
+  memory Int @db.UnsignedMediumInt
+  // time은 UnsignedSmallInt(65,000)를 넘지는 않음
+  time Int @db.UnsignedSmallInt
   language String
   codeLength Int
 
