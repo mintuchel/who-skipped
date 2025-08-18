@@ -1,5 +1,6 @@
 export interface Submission {
-  solutionId: bigint;
+  // 9e15까지 오차없이 잘 저장
+  solutionId: number;
   name: string;
   problemId: number;
   result: string;

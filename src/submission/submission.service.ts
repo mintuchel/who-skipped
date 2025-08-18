@@ -19,35 +19,31 @@ export class SubmissionService {
       }
     });
 
-    // bigint를 json.stringfy 못해서 toString으로 바꿔서 넘기기
     return submissions.map((sub) => ({
-      ...sub,
-      solutionId: sub.solutionId.toString()
+      solutionId: sub.solutionId,
+      name: sub.name,
+      problemId: sub.problemId,
+      result: sub.result,
+      memory: sub.memory,
+      time: sub.time,
+      language: sub.language,
+      codeLength: sub.codeLength,
+      submittedAt: sub.submittedAt
     }));
-  }
-
-  private async getAllUsers(): Promise<string[]> {
-    const users = await this.prisma.users.findMany({
-      select: {
-        name: true
-      }
-    });
-
-    return users.map((user) => user.name);
   }
 
   private mapResultToSubmissionResult(result: string): SubmissionResult {
     switch (result) {
       case "맞았습니다!!":
         return SubmissionResult.ACCEPTED;
-      case "시간 초과":
-        return SubmissionResult.TIME_LIMIT_EXCEED;
       case "틀렸습니다":
         return SubmissionResult.WRONG_ANSWER;
-      case "메모리 초과":
-        return SubmissionResult.MEMORY_LIMIT_EXCEED;
+      case "시간 초과":
+        return SubmissionResult.TIME_LIMIT_EXCEED;
       case "컴파일 에러":
         return SubmissionResult.COMPILE_ERROR;
+      case "메모리 초과":
+        return SubmissionResult.MEMORY_LIMIT_EXCEED;
       case "런타임 에러":
         return SubmissionResult.RUNTIME_ERROR;
       default:
@@ -58,9 +54,12 @@ export class SubmissionService {
   // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
   // connect를 사용하지 않더라도 연관관계 매핑이 된다
   private async saveSubmissions(submissions: Submission[]) {
+    console.log(submissions);
+
     await this.prisma.submissions.createMany({
       data: submissions.map((submission) => ({
         name: submission.name,
+        // number -> unsignedInt 타입으로 잘 저장가능
         solutionId: submission.solutionId,
         problemId: submission.problemId,
         // enum 값으로 매핑
@@ -73,6 +72,20 @@ export class SubmissionService {
         submittedAt: new Date(submission.submittedAt)
       }))
     });
+  }
+
+  // 특정 유저의 30일동안 푼 문제 가져옴
+  // 각 유저마다 회원가입 했을때만 딱 한번 호출됨
+  async getNewUsersSubmissions() {}
+
+  private async getAllUsers(): Promise<string[]> {
+    const users = await this.prisma.users.findMany({
+      select: {
+        name: true
+      }
+    });
+
+    return users.map((user) => user.name);
   }
 
   // puppeteer 사용해서 크롤링
@@ -95,8 +108,8 @@ export class SubmissionService {
         { waitUntil: "domcontentloaded" }
       );
 
-      // puppeteer의 evaludate은 브라우저 안에서 코드를 실행하게 해주는 함수
-      // html을 파싱하는 작업은 이 함수 안에서 해야함
+      // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
+      // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
       const submissions = await page.evaluate(() => {
         // tbody 요소 선택
         const tbodyElements = document.querySelectorAll("tbody");
@@ -120,14 +133,15 @@ export class SubmissionService {
                 .split("T")[0];
 
               return {
-                // solutionId는 BigInt로 파싱해주어야함
-                solutionId: BigInt(cells[0].innerText),
+                // JS Number는 9e15까지 안전함
+                // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
+                solutionId: parseInt(cells[0].innerText),
                 name: cells[1].innerText,
                 problemId:
                   parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
                 result: cells[3].querySelector("span")?.innerText || "",
-                memory: parseInt(cells[4].innerText) || 0,
-                time: parseInt(cells[5].innerText) || 0,
+                memory: parseInt(cells[4]?.innerText || "0") || 0,
+                time: parseInt(cells[5]?.innerText || "0") || 0,
                 language: cells[6].innerText || "",
                 codeLength: parseInt(cells[7].innerText) || 0,
                 submittedAt: submittedAt
