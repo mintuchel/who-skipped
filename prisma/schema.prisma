@@ -67,7 +67,8 @@ model Submissions {
   language String
   codeLength Int
 
-  submittedAt DateTime @db.Date
+  // 시간 분 초 단위까지 저장해야하기 때문에 TIMESTAMP형으로 저장
+  submittedAt DateTime @db.Timestamp()
 
   @@map("submissions")
 }
@@ -102,8 +103,7 @@ model GroupMemberships {
   group   Groups @relation(fields: [groupId], references: [id])
   groupId Int
 
-  // 참여일
-  joinedAt DateTime @default(now())
+  joinedAt DateTime @db.Timestamp() @default(dbgenerated("CURRENT_TIMESTAMP"))
 
   @@unique([userId, groupId])
   @@map("group_memberships")
@@ -124,7 +124,16 @@ model Groups {
   
   users GroupMemberships[]
 
-  createdAt DateTime @default(now())
+  // Group 생성날짜 같은 경우에는 TimeStamp로 둘 필요가 없음
+  // 시간 분 초 밀리초는 필요없기 때문에 DB에서는 Date 형으로 저장하려고 했으나
+  // Prisma에서 지원을 안하네?
+  // 그래서 TimeStamp로 저장하고 값을 return할때 DATE(createdAt)으로 날짜만 반환받을 수 있게 하기로 함
+  // DateTime으로 저장하면 서버 시간대를 반영못하기 때문에 내가 추가적인 계산 +09:00 을 해줘야함
+  // Date로 저장하면 UTC 기준으로 저장해놓고 반환할때 추가적인 계산을 해주던가 아예 저장할때 +09:00의 결과를 저장해줘야함
+  // 근데 이렇게 내가 추가적으로 저장해주는 것보다 그냥 시간대 반영을 DB 서버나 브라우저에 위임하는게 좋을듯?
+  // 그래서 그냥 TimeStamp형으로 저장하기로 결정함
+  // createdAt DateTime @db.Timestamp() @default(dbgenerated("NOW"))
+  createdAt DateTime @db.Timestamp() @default(dbgenerated("CURRENT_TIMESTAMP"))
   
   @@map("groups")
 }

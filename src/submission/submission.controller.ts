@@ -8,6 +8,12 @@ import { SubmissionInfoResponse } from "./dto/response/submission-info.dto";
 export class SubmissionController {
   constructor(private readonly submissionService: SubmissionService) {}
 
+  @Get("/test")
+  @ApiOperation({ summary: "전체 제출내역 조회" })
+  async test(): Promise<any> {
+    return await this.submissionService.test();
+  }
+
   @Get()
   @ApiOperation({ summary: "전체 제출내역 조회" })
   async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {

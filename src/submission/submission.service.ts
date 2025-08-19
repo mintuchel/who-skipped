@@ -11,6 +11,32 @@ import puppeteer from "puppeteer-core";
 export class SubmissionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async test() {
+    // 2025-08-12 14:20:47
+    const timestamp = 1754976047 * 1000;
+    const date = new Date(timestamp);
+    console.log(date.setHours(date.getHours() + 9));
+
+    const submission = await this.prisma.submissions.create({
+      data: {
+        name: "mintuchel",
+        // number -> unsignedInt 타입으로 잘 저장가능
+        solutionId: 1,
+        problemId: 1,
+        // enum 값으로 매핑
+        result: SubmissionResult.ACCEPTED,
+        memory: 100,
+        time: 100,
+        language: "C++17",
+        codeLength: 50,
+        // String 값을 Date 형으로 변환해서 저장
+        submittedAt: date
+      }
+    });
+
+    return submission;
+  }
+
   // 전체 제출내역 조회
   async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {
     // solutionId 내림차순으로 정렬하여 반환
@@ -35,19 +61,25 @@ export class SubmissionService {
   }
 
   private mapResultToSubmissionResult(result: string): SubmissionResult {
+    if (result.includes("런타임 에러")) {
+      return SubmissionResult.RUNTIME_ERROR;
+    }
+
     switch (result) {
       case "맞았습니다!!":
         return SubmissionResult.ACCEPTED;
       case "틀렸습니다":
         return SubmissionResult.WRONG_ANSWER;
       case "시간 초과":
-        return SubmissionResult.TIME_LIMIT_EXCEED;
+        return SubmissionResult.TIME_LIMIT;
       case "컴파일 에러":
         return SubmissionResult.COMPILE_ERROR;
       case "메모리 초과":
-        return SubmissionResult.MEMORY_LIMIT_EXCEED;
-      case "런타임 에러":
-        return SubmissionResult.RUNTIME_ERROR;
+        return SubmissionResult.MEMORY_LIMIT;
+      case "출력 초과":
+        return SubmissionResult.OUTPUT_LIMIT;
+      case "출력 형식이 잘못되었습니다":
+        return SubmissionResult.OUTPUT_FORMAT_ERROR;
       default:
         return SubmissionResult.WRONG_ANSWER;
     }
@@ -56,8 +88,6 @@ export class SubmissionService {
   // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
   // connect를 사용하지 않더라도 연관관계 매핑이 된다
   private async saveSubmissions(submissions: Submission[]) {
-    console.log(submissions);
-
     await this.prisma.submissions.createMany({
       data: submissions.map((submission) => ({
         name: submission.name,
@@ -70,8 +100,10 @@ export class SubmissionService {
         time: submission.time,
         language: submission.language,
         codeLength: submission.codeLength,
-        // String 값을 Date 형으로 변환해서 저장
-        submittedAt: new Date(submission.submittedAt)
+        // 1. Javascript 객체는 ms초 단위를 사용하므로 크롤링한 초단위인 timestamp에 1000을 곱해줘야함
+        // 2. Timestamp는 UTC 기준의 절대시간이므로 정확한 한국 시간을 도출하기 위해서는 +09:00 즉, 9시간을 더해줘야함
+        //    9시간 = 9 * 60 * 60 * 1000 = 32400000 밀리초
+        submittedAt: new Date(submission.submittedAt * 1000 + 32400000)
       }))
     });
   }
@@ -138,17 +170,6 @@ export class SubmissionService {
               // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
               const cells = row.querySelectorAll("td");
 
-              // timestamp 값 파싱
-              const timestamp = parseInt(
-                cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
-                  ""
-              );
-
-              // timestamp가 초단위이므로 밀리초로 바꾸고 ISO형식으로 바꿔서 날짜부분만 추출
-              const submittedAt = new Date(timestamp * 1000)
-                .toISOString()
-                .split("T")[0];
-
               return {
                 // JS Number는 9e15까지 안전함
                 // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
@@ -161,7 +182,11 @@ export class SubmissionService {
                 time: parseInt(cells[5]?.innerText || "0") || 0,
                 language: cells[6].innerText || "",
                 codeLength: parseInt(cells[7].innerText) || 0,
-                submittedAt: submittedAt
+                // timestamp 값 파싱 (이건 UTC기준 값임 -> 서버에서 한국시간대로 변환)
+                submittedAt: parseInt(
+                  cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
+                    ""
+                )
               };
             });
         }, count);

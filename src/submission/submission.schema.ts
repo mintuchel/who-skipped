@@ -8,6 +8,6 @@ export interface Submission {
   time: number;
   language: string;
   codeLength: number;
-  // 날짜를 string형으로 전달하고 createMany에서 Date로 변환해서 저장하기 위함
-  submittedAt: string;
+  // timestamp 값인 밀리초값을 넘김
+  submittedAt: number;
 }
