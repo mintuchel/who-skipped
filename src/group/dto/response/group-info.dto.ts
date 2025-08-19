@@ -1,5 +1,7 @@
 export interface GroupInfoResponse {
   name: string;
   manager: string;
-  created_at: Date;
+  description: string;
+  createdAt: Date;
+  members: Array<{ name: string; skippedCnt: number; joinedAt: Date }>;
 }
