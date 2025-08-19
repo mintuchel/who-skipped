@@ -83,7 +83,7 @@ model Users {
 
   // 한 명의 유저는 여러 그룹에 속할 수 있음
   // Users와 GroupMembership은 일대다 관계
-  groups GroupMembership[]
+  groups GroupMemberships[]
 
   // 한 명의 유저는 여러 커밋 내역이 존재
   submissions Submissions[]
@@ -91,7 +91,7 @@ model Users {
   @@map("users")
 }
 
-model GroupMembership {
+model GroupMemberships {
   id Int @id @default(autoincrement())
 
   user   Users @relation(fields: [userId], references: [id])
@@ -104,7 +104,7 @@ model GroupMembership {
   joinedAt DateTime @default(now())
 
   @@unique([userId, groupId])
-  @@map("group_membership")
+  @@map("group_memberships")
 }
 
 // SELECT * FROM `groups`;
@@ -112,13 +112,15 @@ model Groups {
   id   Int       @id @default(autoincrement())
   name String    @unique @db.VarChar(100) // 그룹 이름
 
+  description String // 그룹 설명
+
   // 모든 그룹에는 한 명의 그룹장만 존재
   manager   Users @relation(fields: [managerId], references: [id])
   managerId String 
 
   managerName String @db.VarChar(100) // 매니저 이름
   
-  users GroupMembership[]
+  users GroupMemberships[]
 
   createdAt DateTime @default(now())
   
