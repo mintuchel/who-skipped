@@ -3,6 +3,7 @@ import { PrismaService } from "prisma/prisma.service";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
+import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
 
 @Injectable()
 export class UserService {
@@ -21,7 +22,6 @@ export class UserService {
     }));
   }
 
-  // password 정보 빼고만 보내주기
   async getUser(name: string): Promise<UserInfoResponse> {
     const user = await this.prisma.users.findUnique({
       where: { name: name }
@@ -40,7 +40,7 @@ export class UserService {
 
   async getUserGroups(payload: JwtPayload): Promise<UserGroupInfo[]> {
     // include가 join과 유사
-    const userGroups = await this.prisma.groupMembership.findMany({
+    const userGroups = await this.prisma.groupMemberships.findMany({
       where: { userId: payload.id },
       include: { group: true }
     });
@@ -49,6 +49,24 @@ export class UserService {
       name: group.group.name,
       manager: group.group.managerName,
       joinedAt: group.joinedAt
+    }));
+  }
+
+  // 한 달 간의 시도내역 조회
+  async getUserStreaks(payload: JwtPayload): Promise<UserStreakInfoResponse[]> {
+    const userStreaks = await this.prisma.submissions.groupBy({
+      by: ["submittedAt"],
+      where: {
+        name: payload.name
+      },
+      _count: {
+        submittedAt: true
+      }
+    });
+
+    return userStreaks.map((streak) => ({
+      submitDate: streak.submittedAt.toISOString().split("T")[0],
+      submitCount: streak._count.submittedAt
     }));
   }
 }

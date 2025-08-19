@@ -10,6 +10,7 @@ import { UserService } from "./user.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
+import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
 
 @ApiTags("User")
@@ -38,6 +39,14 @@ export class UserController {
   @ApiOperation({ summary: "내 정보" })
   async getProfile(@Request() req) {
     return req.user;
+  }
+
+  @Get("/streaks")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "특정 유저 스트릭 조회" })
+  async getUserStreaks(@Request() req): Promise<UserStreakInfoResponse[]> {
+    console.log("유저 한달간 스트릭 조회");
+    return await this.userService.getUserStreaks(req.user);
   }
 
   @Get("/:name")
