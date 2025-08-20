@@ -14,12 +14,6 @@ export class ProblemController {
     return await this.problemService.findAll();
   }
 
-  @Get("/submissions")
-  @ApiOperation({ summary: "제출내역에 등록된 문제 받아오기" })
-  async getProblemsInSubmissions(): Promise<number> {
-    return await this.problemService.getProblemsInSubmissions();
-  }
-
   @Get("/:problemId")
   @ApiOperation({ summary: "특정 문제 조회" })
   async getProblem(

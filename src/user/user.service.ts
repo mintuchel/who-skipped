@@ -4,6 +4,8 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
+import { SubmissionModule } from "src/submission/submission.module";
+import { SubmissionResult } from "@prisma/client";
 
 @Injectable()
 export class UserService {
@@ -68,5 +70,14 @@ export class UserService {
       submitDate: streak.submittedAt.toISOString().split("T")[0],
       submitCount: streak._count.submittedAt
     }));
+  }
+
+  async getUserSubmissionData(payload: JwtPayload) {
+    const acceptedResults = await this.prisma.submissions.findMany({
+      where: {
+        name: payload.name,
+        result: SubmissionResult.ACCEPTED
+      }
+    });
   }
 }

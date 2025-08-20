@@ -4,38 +4,16 @@ import { SubmissionInfoResponse } from "./dto/response/submission-info.dto";
 import { SubmissionResult } from "@prisma/client";
 import { PrismaService } from "prisma/prisma.service";
 import puppeteer from "puppeteer-core";
+import { ProblemService } from "src/problem/problem.service";
 
 // 최근 30일간까지만 스크롤
 
 @Injectable()
 export class SubmissionService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async test() {
-    // 2025-08-12 14:20:47
-    const timestamp = 1754976047 * 1000;
-    const date = new Date(timestamp);
-    console.log(date.setHours(date.getHours() + 9));
-
-    const submission = await this.prisma.submissions.create({
-      data: {
-        name: "mintuchel",
-        // number -> unsignedInt 타입으로 잘 저장가능
-        solutionId: 1,
-        problemId: 1,
-        // enum 값으로 매핑
-        result: SubmissionResult.ACCEPTED,
-        memory: 100,
-        time: 100,
-        language: "C++17",
-        codeLength: 50,
-        // String 값을 Date 형으로 변환해서 저장
-        submittedAt: date
-      }
-    });
-
-    return submission;
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly problemService: ProblemService
+  ) {}
 
   // 전체 제출내역 조회
   async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {
@@ -107,10 +85,6 @@ export class SubmissionService {
       }))
     });
   }
-
-  // 특정 유저의 30일동안 푼 문제 가져옴
-  // 각 유저마다 회원가입 했을때만 딱 한번 호출됨
-  async getNewUsersSubmissions() {}
 
   private async getAllUsers(): Promise<string[]> {
     const users = await this.prisma.users.findMany({
@@ -191,6 +165,10 @@ export class SubmissionService {
             });
         }, count);
 
+        const problemIdList = submissions.map((sub) => sub.problemId);
+        // 문제 먼저 조회해서 저장
+        await this.problemService.addProblemsInSubmissions(problemIdList);
+        // 제출내역 저장
         await this.saveSubmissions(submissions);
 
         // 이번 페이지에서 끝났으면 크롤링 종료
