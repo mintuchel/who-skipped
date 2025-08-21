@@ -12,6 +12,7 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
+import { UserAcceptedProblemTagsInfoResponse } from "./dto/response/user-accepted-problem-tags-info.dto";
 
 @ApiTags("User")
 @Controller("users")
@@ -47,6 +48,16 @@ export class UserController {
   async getUserStreaks(@Request() req): Promise<UserStreakInfoResponse[]> {
     console.log("유저 한달간 스트릭 조회");
     return await this.userService.getUserStreaks(req.user);
+  }
+
+  @Get("/tags")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "특정 유저 스트릭 조회" })
+  async getUserTags(
+    @Request() req
+  ): Promise<UserAcceptedProblemTagsInfoResponse[]> {
+    console.log("유저 태그 조회");
+    return await this.userService.getUserAcceptedProblemTags(req.user);
   }
 
   @Get("/:name")

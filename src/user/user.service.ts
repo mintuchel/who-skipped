@@ -6,6 +6,7 @@ import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
 import { SubmissionModule } from "src/submission/submission.module";
 import { SubmissionResult } from "@prisma/client";
+import { UserAcceptedProblemTagsInfoResponse } from "./dto/response/user-accepted-problem-tags-info.dto";
 
 @Injectable()
 export class UserService {
@@ -24,6 +25,7 @@ export class UserService {
     }));
   }
 
+  // 특정 유저 조회
   async getUser(name: string): Promise<UserInfoResponse> {
     const user = await this.prisma.users.findUnique({
       where: { name: name }
@@ -40,6 +42,7 @@ export class UserService {
     };
   }
 
+  // 유저가 속한 그룹 조회
   async getUserGroups(payload: JwtPayload): Promise<UserGroupInfo[]> {
     // include가 join과 유사
     const userGroups = await this.prisma.groupMemberships.findMany({
@@ -54,30 +57,55 @@ export class UserService {
     }));
   }
 
-  // 한 달 간의 시도내역 조회
+  // 특정 유저의 30일간의 제출내역 확인
   async getUserStreaks(payload: JwtPayload): Promise<UserStreakInfoResponse[]> {
-    const userStreaks = await this.prisma.submissions.groupBy({
-      by: ["submittedAt"],
-      where: {
-        name: payload.name
-      },
-      _count: {
-        submittedAt: true
-      }
-    });
+    const userStreaks = await this.prisma.$queryRaw<
+      { date: string; count: number }[]
+    >`
+      SELECT DATE_FORMAT(submittedAt, "%Y-%m-%d") AS date, COUNT(*) AS count
+      FROM submissions
+      WHERE name = ${payload.name}
+      GROUP BY DATE_FORMAT(submittedAt, "%Y-%m-%d")
+      ORDER BY date;
+    `;
 
+    console.log(userStreaks);
+
+    // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
     return userStreaks.map((streak) => ({
-      submitDate: streak.submittedAt.toISOString().split("T")[0],
-      submitCount: streak._count.submittedAt
+      submitDate: streak.date,
+      submitCount: Number(streak.count)
     }));
   }
 
-  async getUserSubmissionData(payload: JwtPayload) {
-    const acceptedResults = await this.prisma.submissions.findMany({
-      where: {
-        name: payload.name,
-        result: SubmissionResult.ACCEPTED
-      }
-    });
+  // 특정 유저의 30일간의 맞은 문제 유형 확인
+  async getUserAcceptedProblemTags(
+    payload: JwtPayload
+  ): Promise<UserAcceptedProblemTagsInfoResponse[]> {
+    const userAcceptedProblemTags = await this.prisma.$queryRaw<
+      {
+        tag: string;
+        count: number;
+      }[]
+    >`
+      SELECT problem_tags.tag AS tag, COUNT(*) AS count
+      FROM problems
+      JOIN problem_tags
+      ON problems.id = problem_tags.problemId
+      WHERE problems.id IN (
+        SELECT problemId
+        FROM submissions
+        WHERE name = ${payload.name} AND result = "ACCEPTED"
+      )
+      GROUP BY problem_tags.tag
+    `;
+
+    console.log(userAcceptedProblemTags);
+
+    // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
+    return userAcceptedProblemTags.map((tagResults) => ({
+      tag: tagResults.tag,
+      count: Number(tagResults.count)
+    }));
   }
 }

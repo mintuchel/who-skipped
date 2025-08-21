@@ -7,6 +7,7 @@ import { ProblemModule } from "src/problem/problem.module";
 @Module({
   providers: [SubmissionService],
   controllers: [SubmissionController],
-  imports: [PrismaModule, ProblemModule]
+  imports: [PrismaModule, ProblemModule],
+  exports: [SubmissionService]
 })
 export class SubmissionModule {}

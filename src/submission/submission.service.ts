@@ -38,31 +38,6 @@ export class SubmissionService {
     }));
   }
 
-  private mapResultToSubmissionResult(result: string): SubmissionResult {
-    if (result.includes("런타임 에러")) {
-      return SubmissionResult.RUNTIME_ERROR;
-    }
-
-    switch (result) {
-      case "맞았습니다!!":
-        return SubmissionResult.ACCEPTED;
-      case "틀렸습니다":
-        return SubmissionResult.WRONG_ANSWER;
-      case "시간 초과":
-        return SubmissionResult.TIME_LIMIT;
-      case "컴파일 에러":
-        return SubmissionResult.COMPILE_ERROR;
-      case "메모리 초과":
-        return SubmissionResult.MEMORY_LIMIT;
-      case "출력 초과":
-        return SubmissionResult.OUTPUT_LIMIT;
-      case "출력 형식이 잘못되었습니다":
-        return SubmissionResult.OUTPUT_FORMAT_ERROR;
-      default:
-        return SubmissionResult.WRONG_ANSWER;
-    }
-  }
-
   // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
   // connect를 사용하지 않더라도 연관관계 매핑이 된다
   private async saveSubmissions(submissions: Submission[]) {
@@ -86,21 +61,9 @@ export class SubmissionService {
     });
   }
 
-  private async getAllUsers(): Promise<string[]> {
-    const users = await this.prisma.users.findMany({
-      select: {
-        name: true
-      }
-    });
-
-    return users.map((user) => user.name);
-  }
-
   // puppeteer 사용해서 크롤링
-  // 푼 문제에 대한 정보가 mongodb에 없으면 problemservice에서 문제 조회해서 mongodb에 저장
-  async getUserSubmissions(): Promise<string> {
-    const userIdList = await this.getAllUsers();
-
+  // 회원가입 시 호출됨
+  async getUserSubmissions(name: String): Promise<void> {
     const browser = await puppeteer.launch({
       // headless: false하면 크롤링 창 보임
       headless: false,
@@ -109,79 +72,77 @@ export class SubmissionService {
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     });
 
+    // 창 열고 제출내역 페이지로 이동
     const page = await browser.newPage();
+    await page.goto(
+      `https://www.acmicpc.net/status?problem_id=&user_id=${name}&language_id=-1&result_id=-1`,
+      { waitUntil: "domcontentloaded" }
+    );
 
-    for (const userId of userIdList) {
-      await page.goto(
-        `https://www.acmicpc.net/status?problem_id=&user_id=${userId}&language_id=-1&result_id=-1`,
-        { waitUntil: "domcontentloaded" }
-      );
+    while (1) {
+      // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
+      // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
+      // 한 달 전 제출내역들의 갯수 파악하기
+      const count = await page.evaluate(() => {
+        const oneMonthAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60; // 30일 전 timestamp
 
-      while (1) {
-        // 한 달 전 기록 index
-        const count = await page.evaluate(() => {
-          const oneMonthAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60; // 30일 전 timestamp
+        // 이미 최신순으로 정렬된 배열 반환
+        const timestamps = Array.from(
+          document.querySelectorAll("a.real-time-update")
+        ).map((a) => parseInt(a.getAttribute("data-timestamp") || "0"));
 
-          // 이미 최신순으로 정렬된 배열 반환
-          const timestamps = Array.from(
-            document.querySelectorAll("a.real-time-update")
-          ).map((a) => parseInt(a.getAttribute("data-timestamp") || "0"));
+        // 한 달 전 제출내역에 대한 개수 반환
+        // 기존 배열이 정렬되어있으므로 filter된 배열도 정렬되어있음
+        return timestamps.filter((ts) => ts >= oneMonthAgo).length;
+      });
 
-          // 한 달 전 제출내역에 대한 개수 반환
-          // 기존 배열이 정렬되어있으므로 filter된 배열도 정렬되어있음
-          return timestamps.filter((ts) => ts >= oneMonthAgo).length;
-        });
+      const submissions = await page.evaluate((count) => {
+        // 모든 제출내역 Row 선택
+        const submissionRows = document.querySelectorAll("tbody tr");
 
-        // evaluate의 콜백 함수는 브라우저(크롬 페이지 DOM)에서 실행되는 코드이므로
-        // 해당 코드 내부에서 사용하는 함수들을 evaluate 함수 외부에서 실행하지 못함!
-        const submissions = await page.evaluate((count) => {
-          // 모든 제출내역 Row 선택
-          const submissionRows = document.querySelectorAll("tbody tr");
+        return Array.from(submissionRows)
+          .slice(0, count) // 0부터 count-1 원소까지 축소
+          .map((row) => {
+            // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
+            const cells = row.querySelectorAll("td");
 
-          return Array.from(submissionRows)
-            .slice(0, count) // 0부터 count-1 원소까지 축소
-            .map((row) => {
-              // 한 개의 제출내역 Row에서 각 Cell들 배열로 추출
-              const cells = row.querySelectorAll("td");
+            return {
+              // JS Number는 9e15까지 안전함
+              // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
+              solutionId: parseInt(cells[0].innerText),
+              name: cells[1].innerText,
+              problemId:
+                parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
+              result: cells[3].querySelector("span")?.innerText || "",
+              memory: parseInt(cells[4]?.innerText || "0") || 0,
+              time: parseInt(cells[5]?.innerText || "0") || 0,
+              language: cells[6].innerText || "",
+              codeLength: parseInt(cells[7].innerText) || 0,
+              // timestamp 값 파싱 (이건 UTC기준 값임 -> 서버에서 한국시간대로 변환)
+              submittedAt: parseInt(
+                cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
+                  ""
+              )
+            };
+          });
+      }, count);
 
-              return {
-                // JS Number는 9e15까지 안전함
-                // parseInt해줘도 DB에는 unsignedInt로 잘 저장될 수 있다
-                solutionId: parseInt(cells[0].innerText),
-                name: cells[1].innerText,
-                problemId:
-                  parseInt(cells[2].querySelector("a")?.innerText || "0") || 0,
-                result: cells[3].querySelector("span")?.innerText || "",
-                memory: parseInt(cells[4]?.innerText || "0") || 0,
-                time: parseInt(cells[5]?.innerText || "0") || 0,
-                language: cells[6].innerText || "",
-                codeLength: parseInt(cells[7].innerText) || 0,
-                // timestamp 값 파싱 (이건 UTC기준 값임 -> 서버에서 한국시간대로 변환)
-                submittedAt: parseInt(
-                  cells[8].querySelector("a")?.getAttribute("data-timestamp") ||
-                    ""
-                )
-              };
-            });
-        }, count);
+      const problemIdList = submissions.map((sub) => sub.problemId);
+      // 문제 먼저 조회해서 저장
+      await this.problemService.addProblemsInSubmissions(problemIdList);
+      // 제출내역 저장
+      await this.saveSubmissions(submissions);
 
-        const problemIdList = submissions.map((sub) => sub.problemId);
-        // 문제 먼저 조회해서 저장
-        await this.problemService.addProblemsInSubmissions(problemIdList);
-        // 제출내역 저장
-        await this.saveSubmissions(submissions);
+      // 이번 페이지에서 끝났으면 크롤링 종료
+      if (count < 20) break;
 
-        // 이번 페이지에서 끝났으면 크롤링 종료
-        if (count < 20) break;
-
-        // 아니면 다음 페이지까지 넘어가서 계속 진행
-        await page.click("#next_page");
-      }
+      // 아니면 다음 페이지까지 넘어가서 계속 진행
+      await page.click("#next_page");
     }
 
     await browser.close();
 
-    return "제출 내역 크롤링 성공";
+    console.log(name, "의 제출 내역 크롤링 성공");
   }
 
   async deleteSubmissions() {
@@ -197,5 +158,30 @@ export class SubmissionService {
     });
 
     return "한 달 전 내역 삭제 성공";
+  }
+
+  private mapResultToSubmissionResult(result: string): SubmissionResult {
+    if (result.includes("런타임 에러")) {
+      return SubmissionResult.RUNTIME_ERROR;
+    }
+
+    switch (result) {
+      case "맞았습니다!!":
+        return SubmissionResult.ACCEPTED;
+      case "틀렸습니다":
+        return SubmissionResult.WRONG_ANSWER;
+      case "시간 초과":
+        return SubmissionResult.TIME_LIMIT;
+      case "컴파일 에러":
+        return SubmissionResult.COMPILE_ERROR;
+      case "메모리 초과":
+        return SubmissionResult.MEMORY_LIMIT;
+      case "출력 초과":
+        return SubmissionResult.OUTPUT_LIMIT;
+      case "출력 형식이 잘못되었습니다":
+        return SubmissionResult.OUTPUT_FORMAT_ERROR;
+      default:
+        return SubmissionResult.WRONG_ANSWER;
+    }
   }
 }

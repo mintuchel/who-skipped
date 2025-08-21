@@ -14,14 +14,10 @@ export class SubmissionController {
     return await this.submissionService.getAllSubmissions();
   }
 
-  @Post()
-  @ApiOperation({ summary: "전체 유저 제출내역 최신화" })
-  async updateUserSubmissions() {
-    return await this.submissionService.getUserSubmissions();
-  }
-
+  // 오늘 제출한거 추가하고
+  // 30일전 제출한거 삭제
   @Delete()
-  @ApiOperation({ summary: "한 달 전 내역 삭제" })
+  @ApiOperation({ summary: "전체 제출내역 업데이트" })
   async deleteSubmissions() {
     return await this.submissionService.deleteSubmissions();
   }
