@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module";
 import { ProblemModule } from "./problem/problem.module";
 import { ConfigModule } from "@nestjs/config";
 import { SubmissionModule } from "./submission/submission.module";
+import { SolvedAcModule } from "./solvedac/solvedac.module";
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { SubmissionModule } from "./submission/submission.module";
     AuthModule,
     GroupModule,
     ProblemModule,
-    SubmissionModule
+    SubmissionModule,
+    SolvedAcModule
   ]
 })
 export class AppModule {}
