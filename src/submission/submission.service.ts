@@ -6,14 +6,25 @@ import { PrismaService } from "prisma/prisma.service";
 import puppeteer from "puppeteer-core";
 import { ProblemService } from "src/problem/problem.service";
 
-// 최근 30일간까지만 스크롤
-
 @Injectable()
 export class SubmissionService {
+  // Enum으로 매핑하기 위한 Map 자료구조 사용
+  // 조회 O(1)로 맞을때까지 조건문 타는 switch문보다 빠르게
+  private readonly resultToSubmissionResultMap: Map<string, SubmissionResult>;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly problemService: ProblemService
-  ) {}
+  ) {
+    this.resultToSubmissionResultMap = new Map<string, SubmissionResult>([
+      ["맞았습니다!!", SubmissionResult.ACCEPTED],
+      ["틀렸습니다", SubmissionResult.WRONG_ANSWER],
+      ["시간 초과", SubmissionResult.TIME_LIMIT],
+      ["컴파일 에러", SubmissionResult.COMPILE_ERROR],
+      ["출력 초과", SubmissionResult.OUTPUT_LIMIT],
+      ["출력 형식이 잘못되었습니다", SubmissionResult.OUTPUT_FORMAT_ERROR]
+    ]);
+  }
 
   // 전체 제출내역 조회
   async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {
@@ -36,29 +47,6 @@ export class SubmissionService {
       codeLength: sub.codeLength,
       submittedAt: sub.submittedAt
     }));
-  }
-
-  // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
-  // connect를 사용하지 않더라도 연관관계 매핑이 된다
-  private async saveSubmissions(submissions: Submission[]) {
-    await this.prisma.submissions.createMany({
-      data: submissions.map((submission) => ({
-        name: submission.name,
-        // number -> unsignedInt 타입으로 잘 저장가능
-        solutionId: submission.solutionId,
-        problemId: submission.problemId,
-        // enum 값으로 매핑
-        result: this.mapResultToSubmissionResult(submission.result),
-        memory: submission.memory,
-        time: submission.time,
-        language: submission.language,
-        codeLength: submission.codeLength,
-        // 1. Javascript 객체는 ms초 단위를 사용하므로 크롤링한 초단위인 timestamp에 1000을 곱해줘야함
-        // 2. Timestamp는 UTC 기준의 절대시간이므로 정확한 한국 시간을 도출하기 위해서는 +09:00 즉, 9시간을 더해줘야함
-        //    9시간 = 9 * 60 * 60 * 1000 = 32400000 밀리초
-        submittedAt: new Date(submission.submittedAt * 1000 + 32400000)
-      }))
-    });
   }
 
   // puppeteer 사용해서 크롤링
@@ -129,8 +117,9 @@ export class SubmissionService {
 
       const problemIdList = submissions.map((sub) => sub.problemId);
       // 문제 먼저 조회해서 저장
-      await this.problemService.addProblemsInSubmissions(problemIdList);
-      // 제출내역 저장
+      // Submissions가 외래키로 문제 번호를 가지고 있으므로 문제를 미리 저장해야함
+      await this.problemService.saveProblemsInSubmissions(problemIdList);
+      // 제출내역 DB에 저장
       await this.saveSubmissions(submissions);
 
       // 이번 페이지에서 끝났으면 크롤링 종료
@@ -145,43 +134,28 @@ export class SubmissionService {
     console.log(name, "의 제출 내역 크롤링 성공");
   }
 
-  async deleteSubmissions() {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    await this.prisma.submissions.deleteMany({
-      where: {
-        submittedAt: {
-          lt: thirtyDaysAgo // 30일 전 이전 데이터 삭제
-        }
-      }
+  // prisma는 connect 없이도 관계 필드의 값을 직접 지정 가능!
+  // connect를 사용하지 않더라도 연관관계 매핑이 된다
+  private async saveSubmissions(submissions: Submission[]) {
+    await this.prisma.submissions.createMany({
+      data: submissions.map((submission) => ({
+        name: submission.name,
+        // number -> unsignedInt 타입으로 잘 저장가능
+        solutionId: submission.solutionId,
+        problemId: submission.problemId,
+        // enum 값으로 매핑
+        result:
+          this.resultToSubmissionResultMap.get(submission.result) ??
+          SubmissionResult.RUNTIME_ERROR,
+        memory: submission.memory,
+        time: submission.time,
+        language: submission.language,
+        codeLength: submission.codeLength,
+        // 1. Javascript 객체는 ms초 단위를 사용하므로 크롤링한 초단위인 timestamp에 1000을 곱해줘야함
+        // 2. Timestamp는 UTC 기준의 절대시간이므로 정확한 한국 시간을 도출하기 위해서는 +09:00 즉, 9시간을 더해줘야함
+        //    9시간 = 9 * 60 * 60 * 1000 = 32400000 밀리초
+        submittedAt: new Date(submission.submittedAt * 1000 + 32400000)
+      }))
     });
-
-    return "한 달 전 내역 삭제 성공";
-  }
-
-  private mapResultToSubmissionResult(result: string): SubmissionResult {
-    if (result.includes("런타임 에러")) {
-      return SubmissionResult.RUNTIME_ERROR;
-    }
-
-    switch (result) {
-      case "맞았습니다!!":
-        return SubmissionResult.ACCEPTED;
-      case "틀렸습니다":
-        return SubmissionResult.WRONG_ANSWER;
-      case "시간 초과":
-        return SubmissionResult.TIME_LIMIT;
-      case "컴파일 에러":
-        return SubmissionResult.COMPILE_ERROR;
-      case "메모리 초과":
-        return SubmissionResult.MEMORY_LIMIT;
-      case "출력 초과":
-        return SubmissionResult.OUTPUT_LIMIT;
-      case "출력 형식이 잘못되었습니다":
-        return SubmissionResult.OUTPUT_FORMAT_ERROR;
-      default:
-        return SubmissionResult.WRONG_ANSWER;
-    }
   }
 }

@@ -13,12 +13,4 @@ export class SubmissionController {
   async getAllSubmissions(): Promise<SubmissionInfoResponse[]> {
     return await this.submissionService.getAllSubmissions();
   }
-
-  // 오늘 제출한거 추가하고
-  // 30일전 제출한거 삭제
-  @Delete()
-  @ApiOperation({ summary: "전체 제출내역 업데이트" })
-  async deleteSubmissions() {
-    return await this.submissionService.deleteSubmissions();
-  }
 }
