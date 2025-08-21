@@ -37,8 +37,9 @@ export class UserController {
 
   @Get("/me")
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "내 정보" })
+  @ApiOperation({ summary: "내 정보 조회" })
   async getProfile(@Request() req) {
+    console.log("내 정보 조회");
     return req.user;
   }
 
@@ -52,11 +53,11 @@ export class UserController {
 
   @Get("/tags")
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: "특정 유저 스트릭 조회" })
+  @ApiOperation({ summary: "특정 유저의 맞은 문제 유형 조회" })
   async getUserTags(
     @Request() req
   ): Promise<UserAcceptedProblemTagsInfoResponse[]> {
-    console.log("유저 태그 조회");
+    console.log("특정 유저의 맞은 문제 유형 조회");
     return await this.userService.getUserAcceptedProblemTags(req.user);
   }
 

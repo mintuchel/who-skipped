@@ -1,7 +1,7 @@
 import { SolvedAcTier } from "@prisma/client";
 
-export interface ProblemInfoResponse {
-  problemId: number;
+export interface ProblemInfo {
+  id: number;
   title: string;
   tier: SolvedAcTier;
   tags: string[];

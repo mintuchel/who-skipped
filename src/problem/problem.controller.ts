@@ -11,7 +11,7 @@ export class ProblemController {
   @Get("")
   @ApiOperation({ summary: "전체 문제 조회" })
   async getAllProblems(): Promise<ProblemInfoResponse[]> {
-    return await this.problemService.findAll();
+    return await this.problemService.getAllProblems();
   }
 
   @Get("/:problemId")
@@ -19,6 +19,6 @@ export class ProblemController {
   async getProblem(
     @Param("problemId", ParseIntPipe) problemId: number
   ): Promise<ProblemInfoResponse> {
-    return await this.problemService.findOne(problemId);
+    return await this.problemService.getProblem(problemId);
   }
 }
