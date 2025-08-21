@@ -8,6 +8,7 @@ import { JwtStrategy } from "./security/strategy/jwt.strategy";
 import { LocalStrategy } from "./security/strategy/local.strategy";
 import { JwtAuthGuard } from "./security/guard/jwt.guard";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { SubmissionModule } from "src/submission/submission.module";
 
 @Module({
   controllers: [AuthController],
@@ -19,10 +20,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>("JWT_SECRET"),
-        signOptions: { expiresIn: "6h" }
+        signOptions: { expiresIn: "12h" }
       })
     }),
-    PassportModule
+    PassportModule,
+    SubmissionModule
   ],
   // 타 모듈에서도 UseGuard를 통해 JwtAuthGuard를 사용하기 위해 export 처리
   exports: [JwtAuthGuard]

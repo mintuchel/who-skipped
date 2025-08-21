@@ -10,12 +10,14 @@ import { PrismaService } from "prisma/prisma.service";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { LocalPayload } from "./security/payload/local.payload";
+import { SubmissionService } from "src/submission/submission.service";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly submissionService: SubmissionService
   ) {}
 
   private async encodePassword(password: string): Promise<string> {
@@ -44,6 +46,9 @@ export class AuthService {
         password: password
       }
     });
+
+    // 회원가입한 사람의 제출내역 크롤링해서 미리 저장해두기
+    await this.submissionService.getUserSubmissions(signUpRequest.name);
 
     // prisma create의 결과물은 칼럼 전체임
     return user;
