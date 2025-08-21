@@ -7,8 +7,9 @@ import { PassportModule } from "@nestjs/passport";
 import { JwtStrategy } from "./security/strategy/jwt.strategy";
 import { LocalStrategy } from "./security/strategy/local.strategy";
 import { JwtAuthGuard } from "./security/guard/jwt.guard";
-import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 import { SubmissionModule } from "src/submission/submission.module";
+import { SolvedAcModule } from "src/solvedac/solvedac.module";
 
 @Module({
   controllers: [AuthController],
@@ -24,6 +25,7 @@ import { SubmissionModule } from "src/submission/submission.module";
       })
     }),
     PassportModule,
+    SolvedAcModule,
     SubmissionModule
   ],
   // 타 모듈에서도 UseGuard를 통해 JwtAuthGuard를 사용하기 위해 export 처리

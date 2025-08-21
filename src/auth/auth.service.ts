@@ -8,15 +8,17 @@ import {
 import { SignUpRequest } from "./../auth/dto/signup.dto";
 import { PrismaService } from "prisma/prisma.service";
 import { JwtService } from "@nestjs/jwt";
-import * as bcrypt from "bcrypt";
 import { LocalPayload } from "./security/payload/local.payload";
+import { SolvedAcService } from "src/solvedac/solvedac.service";
 import { SubmissionService } from "src/submission/submission.service";
+import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly solvedAcService: SolvedAcService,
     private readonly submissionService: SubmissionService
   ) {}
 
@@ -38,12 +40,21 @@ export class AuthService {
     }
 
     // password encoding
+    // 이거 순서 상관없는데 Promise.all로 동시에 처리할까???
     const password = await this.encodePassword(signUpRequest.password);
+
+    const solvedAcData = await this.solvedAcService.fetchUserInfoFromSolvedAc(
+      signUpRequest.name
+    );
 
     user = await this.prisma.users.create({
       data: {
         name: signUpRequest.name,
-        password: password
+        password: password,
+        tier: solvedAcData.tier,
+        streaks: 0,
+        solvedCount: solvedAcData.solvedCount,
+        joinedAt: new Date(solvedAcData.joinedAt)
       }
     });
 
