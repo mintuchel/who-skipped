@@ -155,7 +155,7 @@ model Users {
   id          String @id @default(uuid())
   name    String @unique @db.VarChar(20)
   password    String @db.VarChar(255)
-  skippedCnt Int    @default(0)
+  
   role        Role   @default(USER)
 
   tier SolvedAcTier // 유저 현재 티어
