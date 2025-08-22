@@ -77,8 +77,7 @@ export class ProblemService {
     // );
 
     for (const problemId of problemList) {
-      const problem = await this.getProblem(problemId);
-      console.log(problem);
+      await this.getProblem(problemId);
     }
 
     console.log("제출내역 저장 전 필요한 문제 저장 완료");
