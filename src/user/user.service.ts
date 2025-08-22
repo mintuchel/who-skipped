@@ -18,8 +18,11 @@ export class UserService {
 
     return users.map((user) => ({
       name: user.name,
-      skippedCnt: user.skippedCnt,
-      role: user.role
+      role: user.role,
+      streaks: user.streaks,
+      tier: user.tier,
+      averageTries: user.averageTries.toNumber(),
+      joinedAt: user.joinedAt
     }));
   }
 
@@ -35,8 +38,11 @@ export class UserService {
 
     return {
       name: user.name,
-      skippedCnt: user.skippedCnt,
-      role: user.role
+      role: user.role,
+      streaks: user.streaks,
+      tier: user.tier,
+      averageTries: user.averageTries.toNumber(),
+      joinedAt: user.joinedAt
     };
   }
 
@@ -67,8 +73,6 @@ export class UserService {
       ORDER BY date;
     `;
 
-    console.log(userStreaks);
-
     // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
     return userStreaks.map((streak) => ({
       submitDate: streak.date,
@@ -97,8 +101,6 @@ export class UserService {
       )
       GROUP BY problem_tags.tag
     `;
-
-    console.log(userAcceptedProblemTags);
 
     // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
     return userAcceptedProblemTags.map((tagResults) => ({
