@@ -4,7 +4,8 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
-import { UserAcceptedProblemTagsInfoResponse } from "./dto/response/user-accepted-problem-tags-info.dto";
+import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class UserService {
@@ -22,6 +23,7 @@ export class UserService {
       streaks: user.streaks,
       tier: user.tier,
       averageTries: user.averageTries.toNumber(),
+      solvedProblemTags: user.solvedProblemTags as Prisma.JsonArray,
       joinedAt: user.joinedAt
     }));
   }
@@ -42,6 +44,7 @@ export class UserService {
       streaks: user.streaks,
       tier: user.tier,
       averageTries: user.averageTries.toNumber(),
+      solvedProblemTags: user.solvedProblemTags as Prisma.JsonArray,
       joinedAt: user.joinedAt
     };
   }
@@ -81,10 +84,10 @@ export class UserService {
   }
 
   // 특정 유저의 30일간의 맞은 문제 유형 확인
-  async getUserAcceptedProblemTags(
+  async updateUserSolvedProblemTags(
     payload: JwtPayload
-  ): Promise<UserAcceptedProblemTagsInfoResponse[]> {
-    const userAcceptedProblemTags = await this.prisma.$queryRaw<
+  ): Promise<UserSolvedProblemTagsInfoResponse[]> {
+    const userSolvedProblemTags = await this.prisma.$queryRaw<
       {
         tag: string;
         count: number;
@@ -103,9 +106,26 @@ export class UserService {
     `;
 
     // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
-    return userAcceptedProblemTags.map((tagResults) => ({
+    const tags = userSolvedProblemTags.map((tagResults) => ({
       tag: tagResults.tag,
       count: Number(tagResults.count)
     }));
+
+    const tagsAsJson = tags.reduce(
+      (acc, cur) => {
+        acc[cur.tag] = Number(cur.count);
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    await this.prisma.users.update({
+      where: { id: payload.id },
+      data: {
+        solvedProblemTags: tagsAsJson
+      }
+    });
+
+    return tags;
   }
 }

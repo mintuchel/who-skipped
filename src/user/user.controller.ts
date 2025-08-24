@@ -1,8 +1,8 @@
 import {
   Controller,
   Get,
+  Patch,
   Param,
-  Delete,
   UseGuards,
   Request
 } from "@nestjs/common";
@@ -12,7 +12,7 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
-import { UserAcceptedProblemTagsInfoResponse } from "./dto/response/user-accepted-problem-tags-info.dto";
+import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
 
 @ApiTags("User")
 @Controller("users")
@@ -51,14 +51,14 @@ export class UserController {
     return await this.userService.getUserStreaks(req.user);
   }
 
-  @Get("/tags")
+  @Patch("/solved-tags")
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "특정 유저의 맞은 문제 유형 조회" })
-  async getUserTags(
+  async updateUserSolvedTags(
     @Request() req
-  ): Promise<UserAcceptedProblemTagsInfoResponse[]> {
-    console.log("특정 유저의 맞은 문제 유형 조회");
-    return await this.userService.getUserAcceptedProblemTags(req.user);
+  ): Promise<UserSolvedProblemTagsInfoResponse[]> {
+    console.log("특정 유저의 맞은 문제 유형 업데이트");
+    return await this.userService.updateUserSolvedProblemTags(req.user);
   }
 
   @Get("/:name")

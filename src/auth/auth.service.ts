@@ -53,6 +53,7 @@ export class AuthService {
         password: password,
         tier: solvedAcData.tier,
         streaks: 0,
+        solvedProblemTags: {},
         solvedCount: solvedAcData.solvedCount,
         joinedAt: new Date(solvedAcData.joinedAt)
       }
