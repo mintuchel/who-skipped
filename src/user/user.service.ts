@@ -3,8 +3,7 @@ import { PrismaService } from "prisma/prisma.service";
 import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
-import { UserStreakInfoResponse } from "./dto/response/user-streak-info.dto";
-import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
+import { UserHeatMapInfoResponse } from "./dto/response/user-heatmap-info.dto";
 import { Prisma } from "@prisma/client";
 
 @Injectable()
@@ -20,8 +19,9 @@ export class UserService {
     return users.map((user) => ({
       name: user.name,
       role: user.role,
-      streaks: user.streaks,
       tier: user.tier,
+      solvedCount: user.solvedCount,
+      streaks: user.streaks,
       averageTries: user.averageTries.toNumber(),
       solvedProblemTags: user.solvedProblemTags as Prisma.JsonArray,
       joinedAt: user.joinedAt
@@ -41,8 +41,9 @@ export class UserService {
     return {
       name: user.name,
       role: user.role,
-      streaks: user.streaks,
       tier: user.tier,
+      solvedCount: user.solvedCount,
+      streaks: user.streaks,
       averageTries: user.averageTries.toNumber(),
       solvedProblemTags: user.solvedProblemTags as Prisma.JsonArray,
       joinedAt: user.joinedAt
@@ -65,7 +66,9 @@ export class UserService {
   }
 
   // 특정 유저의 30일간의 제출내역 확인
-  async getUserStreaks(payload: JwtPayload): Promise<UserStreakInfoResponse[]> {
+  async getUserHeatMap(
+    payload: JwtPayload
+  ): Promise<UserHeatMapInfoResponse[]> {
     const userStreaks = await this.prisma.$queryRaw<
       { date: string; count: number }[]
     >`
@@ -83,11 +86,23 @@ export class UserService {
     }));
   }
 
+  // 여기서 Promise.all로 streaks, averageTries, solvedProblemTags 모두 계산해서 업데이트
+  // 모두 순서가 상관없는 작업들이므로 동시에 병렬적으로 실행시키자
+  async updateUserStatistics(name: string): Promise<void> {
+    await Promise.all([
+      this.updateUserAverageTries(name),
+      this.updateUserSolvedProblemTags(name)
+    ]);
+  }
+
   // 1. 특정 사람이 맞춘 문제 번호만 구하기
   // 2. 해당 문제들의 제출 내역 갯수 구하기
-  async getUserAverageTries(payload: JwtPayload): Promise<Number> {
-    let record = await this.prisma.$queryRaw<{
-      average_tries: any;
+  // 3. AVG 함수로 평균내기
+  private async updateUserAverageTries(name: string): Promise<void> {
+    // queryRaw의 결과는 배열이다.
+    // AVG의 결과는 string으로 매핑된다.
+    const averageTriesRecord = await this.prisma.$queryRaw<{
+      average_tries: string;
     }>`
       SELECT AVG(temp.cnt) AS average_tries
       FROM (
@@ -96,21 +111,24 @@ export class UserService {
         WHERE problemId IN (
           SELECT problemId
           FROM submissions
-          WHERE name = ${payload.name} AND result = "ACCEPTED"
+          WHERE name = ${name} AND result = "ACCEPTED"
         )
         GROUP BY problemId
       ) AS temp
     `;
 
-    const average_tries = Number(record[0].average_tries);
+    const averageTries = Number(averageTriesRecord[0].average_tries);
 
-    return average_tries;
+    await this.prisma.users.update({
+      where: { name: name },
+      data: {
+        averageTries: averageTries
+      }
+    });
   }
 
-  // 특정 유저의 30일간의 맞은 문제유형 확인
-  async updateUserSolvedProblemTags(
-    payload: JwtPayload
-  ): Promise<UserSolvedProblemTagsInfoResponse[]> {
+  // 특정 유저의 30일간의 맞은 문제유형 분석
+  private async updateUserSolvedProblemTags(name: string): Promise<void> {
     const userSolvedProblemTags = await this.prisma.$queryRaw<
       {
         tag: string;
@@ -124,7 +142,7 @@ export class UserService {
       WHERE problems.id IN (
         SELECT problemId
         FROM submissions
-        WHERE name = ${payload.name} AND result = "ACCEPTED"
+        WHERE name = ${name} AND result = "ACCEPTED"
       )
       GROUP BY problem_tags.tag
     `;
@@ -144,12 +162,10 @@ export class UserService {
     );
 
     await this.prisma.users.update({
-      where: { id: payload.id },
+      where: { name: name },
       data: {
         solvedProblemTags: tagsAsJson
       }
     });
-
-    return tags;
   }
 }

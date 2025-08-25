@@ -1,4 +1,4 @@
-export interface UserStreakInfoResponse {
+export interface UserHeatMapInfoResponse {
   submitDate: string;
   submitCount: number;
 }
