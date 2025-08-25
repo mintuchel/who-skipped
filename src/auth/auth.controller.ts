@@ -1,6 +1,5 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
   Request,
@@ -9,7 +8,7 @@ import {
 } from "@nestjs/common";
 
 import { AuthService } from "./auth.service";
-import { SignUpRequest } from "./dto/signup.dto";
+import { SignUpRequest } from "./dto/request/signup.dto";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { LocalAuthGuard } from "./security/guard/local.guard";
 
@@ -20,9 +19,9 @@ export class AuthController {
 
   @Post("/signup")
   @ApiOperation({ summary: "회원가입" })
-  signUp(@Body() signUpRequest: SignUpRequest) {
+  async signUp(@Body() signUpRequest: SignUpRequest): Promise<any> {
     // Prisma return 값을 그대로 return 하면 JSON 형식으로 변환되어 return됨
-    return this.authService.createUser(signUpRequest);
+    return await this.authService.createUser(signUpRequest);
   }
 
   @UseGuards(LocalAuthGuard)

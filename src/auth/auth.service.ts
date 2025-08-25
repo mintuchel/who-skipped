@@ -5,10 +5,11 @@ import {
   HttpException,
   HttpStatus
 } from "@nestjs/common";
-import { SignUpRequest } from "./../auth/dto/signup.dto";
+import { SignUpRequest } from "./dto/request/signup.dto";
 import { PrismaService } from "prisma/prisma.service";
 import { JwtService } from "@nestjs/jwt";
 import { LocalPayload } from "./security/payload/local.payload";
+import { UserService } from "src/user/user.service";
 import { SolvedAcService } from "src/solvedac/solvedac.service";
 import { SubmissionService } from "src/submission/submission.service";
 import * as bcrypt from "bcrypt";
@@ -18,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly userService: UserService,
     private readonly solvedAcService: SolvedAcService,
     private readonly submissionService: SubmissionService
   ) {}
@@ -26,7 +28,7 @@ export class AuthService {
     return await bcrypt.hash(password, 10);
   }
 
-  async createUser(signUpRequest: SignUpRequest) {
+  async createUser(signUpRequest: SignUpRequest): Promise<any> {
     let user = await this.prisma.users.findUnique({
       where: { name: signUpRequest.name }
     });
@@ -39,14 +41,15 @@ export class AuthService {
       );
     }
 
-    // password encoding
-    // 이거 순서 상관없는데 Promise.all로 동시에 처리할까???
-    const password = await this.encodePassword(signUpRequest.password);
+    // password encoding과 solvedac에서 유저 정보 조회하는 것은 순서 상관이 없으므로 병렬적으로 실행하기
+    const [solvedAcData, password] = await Promise.all([
+      await this.solvedAcService.fetchUserInfoFromSolvedAc(signUpRequest.name),
+      await this.encodePassword(signUpRequest.password)
+    ]);
 
-    const solvedAcData = await this.solvedAcService.fetchUserInfoFromSolvedAc(
-      signUpRequest.name
-    );
-
+    // 아래의 getUserSubmissions와 updateUserStatistics를 하기 전에 User 객체를 생성해놔야함
+    // 아래 두 작업에는 user와의 연관관계가 있는데 아래꺼를 먼저하면 외래키 무결성에 어긋나기 때문!
+    // 이쪽이 되게 비효율적인거 같긴한데 어떻게 바꿀 방법이 없으까..??
     user = await this.prisma.users.create({
       data: {
         name: signUpRequest.name,
@@ -62,8 +65,13 @@ export class AuthService {
     // 회원가입한 사람의 제출내역 크롤링해서 미리 저장해두기
     await this.submissionService.getUserSubmissions(signUpRequest.name);
 
-    // prisma create의 결과물은 칼럼 전체임
-    return user;
+    // 제출내역 분석하여 부가정보 업데이트하기
+    await this.userService.updateUserStatistics(signUpRequest.name);
+
+    return {
+      name: user.name,
+      tier: solvedAcData.tier
+    };
   }
 
   // local-strategy의 validate 함수에서 사용되는 함수

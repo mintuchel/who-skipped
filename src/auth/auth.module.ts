@@ -8,6 +8,7 @@ import { JwtStrategy } from "./security/strategy/jwt.strategy";
 import { LocalStrategy } from "./security/strategy/local.strategy";
 import { JwtAuthGuard } from "./security/guard/jwt.guard";
 import { ConfigService } from "@nestjs/config";
+import { UserModule } from "src/user/user.module";
 import { SubmissionModule } from "src/submission/submission.module";
 import { SolvedAcModule } from "src/solvedac/solvedac.module";
 
@@ -25,6 +26,7 @@ import { SolvedAcModule } from "src/solvedac/solvedac.module";
       })
     }),
     PassportModule,
+    UserModule,
     SolvedAcModule,
     SubmissionModule
   ],
