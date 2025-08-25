@@ -61,6 +61,14 @@ export class UserController {
     return await this.userService.updateUserSolvedProblemTags(req.user);
   }
 
+  @Get("/average-tries")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "특정 유저의 평균 시도 횟수 조회" })
+  async getUserAverageTries(@Request() req): Promise<Number> {
+    console.log("특정 유저의 평균 시도 횟수 조회");
+    return await this.userService.getUserAverageTries(req.user);
+  }
+
   @Get("/:name")
   @ApiOperation({ summary: "특정 유저 조회" })
   async getUser(@Param("name") name: string): Promise<UserInfoResponse> {

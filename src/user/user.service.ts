@@ -83,7 +83,31 @@ export class UserService {
     }));
   }
 
-  // 특정 유저의 30일간의 맞은 문제 유형 확인
+  // 1. 특정 사람이 맞춘 문제 번호만 구하기
+  // 2. 해당 문제들의 제출 내역 갯수 구하기
+  async getUserAverageTries(payload: JwtPayload): Promise<Number> {
+    let record = await this.prisma.$queryRaw<{
+      average_tries: any;
+    }>`
+      SELECT AVG(temp.cnt) AS average_tries
+      FROM (
+        SELECT problemId, COUNT(*) AS cnt
+        FROM submissions
+        WHERE problemId IN (
+          SELECT problemId
+          FROM submissions
+          WHERE name = ${payload.name} AND result = "ACCEPTED"
+        )
+        GROUP BY problemId
+      ) AS temp
+    `;
+
+    const average_tries = Number(record[0].average_tries);
+
+    return average_tries;
+  }
+
+  // 특정 유저의 30일간의 맞은 문제유형 확인
   async updateUserSolvedProblemTags(
     payload: JwtPayload
   ): Promise<UserSolvedProblemTagsInfoResponse[]> {

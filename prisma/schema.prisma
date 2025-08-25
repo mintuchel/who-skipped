@@ -164,7 +164,7 @@ model Users {
 
   streaks Int // 현재 스트릭
 
-  averageTries Decimal @db.Decimal(3,2) @default(0) // 평균 시도 횟수 - 문제를 보통 몇 번만에 맞추는지 (전체 3자리로 정수 1자리 소수점 2자리)
+  averageTries Decimal @db.Decimal(4,2) @default(0) // 평균 시도 횟수 - 문제를 보통 몇 번만에 맞추는지 (최대 4자리로 정수 2자리 소수점 2자리)
   
   joinedAt DateTime @db.Timestamp() // 백준 시작 날짜
 
