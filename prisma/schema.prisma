@@ -31,19 +31,20 @@ enum SubmissionResult {
 }
 
 enum Badge{
-  MAZE_RUNNER // 메이즈러너 - BFS DFS 문제 해결
+  MAZE_RUNNER // 메이즈러너 - 깊이 우선 탐색, 너비 우선 탐색 문제 해결
   HANZEL_AND_GRETEL // 헨젤과그레텔 - 백트래킹 문제 해결
   ARCHIMEDES // 아르키메데스 - 수학 해결
   OPTIMIZER // 최적화의 달인 - DP 해결
   HEAD_FIRST// 맨땅에 헤딩 - 브루트포스 해결
   ZERO_TO_HERO // 무에서유 - 구현 해결
-  RIGHT_OR_LEFT // 이분탐색 해결
-  // 문자열 해결
+  RIGHT_OR_LEFT // 이쪽 아님 저쪽 - 이분탐색 해결
+  SHAEKSPEARE // 셰익스피어 - 문자열 해결
   // 정렬 해결
   // 그리디 해결
   // 자료구조 해결
   // 시뮬레이션 해결
   BOY_SCOUT // 그래프 문제 해결 -> 탐색 해결?
+  ONE_SHOT_ONE_KILL // 원샷원킬 - 평균시도 횟수 2 미만
   PRO_FINESSE  // 해결사 - 문제 30개 해결
   HARD_WORKER // 하드워커 - 10일 연속 문제풀이 시도
   TIME_KEEPER // 시간의 지배자 - 시간초과 10개 이상
@@ -82,6 +83,17 @@ enum SolvedAcTier {
   Ruby3
   Ruby2
   Ruby1
+}
+
+model UserBadges {
+  id Int @id @db.UnsignedMediumInt @default(autoincrement())
+
+  user Users @relation(fields: [name], references: [name])
+  name String
+
+  badge Badge
+
+  @@map("user_badges")
 }
 
 model ProblemTags {
@@ -169,6 +181,9 @@ model Users {
   joinedAt DateTime @db.Timestamp() // 백준 시작 날짜
 
   solvedProblemTags Json? // 해결한 문제 유형
+
+  // Users와 UserBadges는 일대다 관계
+  badges UserBadges[]
 
   // 한 명의 유저는 여러 그룹의 그룹장이 될 수 있음
   // Users와 Groups는 일대다 관계
