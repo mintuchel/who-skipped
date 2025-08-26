@@ -4,7 +4,7 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 import { UserHeatMapInfoResponse } from "./dto/response/user-heatmap-info.dto";
-import { Prisma } from "@prisma/client";
+import { Badge, Prisma } from "@prisma/client";
 
 @Injectable()
 export class UserService {
@@ -93,6 +93,151 @@ export class UserService {
       this.updateUserAverageTries(name),
       this.updateUserSolvedProblemTags(name)
     ]);
+    await this.updateUserBadges(name);
+  }
+
+  async updateUserBadges(name: string): Promise<void> {
+    const badgeUnlockThreshold = 5;
+
+    const user = await this.prisma.users.findUnique({
+      where: { name: name }
+    });
+
+    if (!user) {
+      throw new NotFoundException(name + " 사용자를 찾을 수 없습니다");
+    }
+
+    const tags = user.solvedProblemTags as Record<string, number>;
+
+    if (
+      tags["깊이 우선 탐색"] + tags["너비 우선 탐색"] >=
+      badgeUnlockThreshold
+    ) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.MAZE_RUNNER
+        }
+      });
+    }
+    if (tags["수학"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.ARCHIMEDES
+        }
+      });
+    }
+    if (tags["백트래킹"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.HANZEL_AND_GRETEL
+        }
+      });
+    }
+    if (tags["브루트포스 알고리즘"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.HEAD_FIRST
+        }
+      });
+    }
+    if (tags["구현"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.ZERO_TO_HERO
+        }
+      });
+    }
+    if (tags["문자열"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.SHAEKSPEARE
+        }
+      });
+    }
+    if (tags["이분 탐색"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.RIGHT_OR_LEFT
+        }
+      });
+    }
+    if (tags["다이나믹 프로그래밍"] >= badgeUnlockThreshold) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.OPTIMIZER
+        }
+      });
+    }
+
+    // 시간초과 갯수 조회
+    const timeLimtCount = await this.prisma.$queryRaw<{
+      time_limit_count: number;
+    }>`
+      SELECT COUNT(*) AS cnt
+      FROM submissions
+      WHERE name = ${name} AND result = "TIME_LIMIT"
+    `;
+
+    if (timeLimtCount.time_limit_count >= 10) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.TIME_KEEPER
+        }
+      });
+    }
+
+    const solvedProblemCount = await this.prisma.$queryRaw<{
+      solved_problem_count: number;
+    }>`
+      SELECT COUNT(*) AS cnt
+      FROM submissions
+      WHERE name = ${name}
+    `;
+
+    if (solvedProblemCount.solved_problem_count >= 30) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.PRO_FINESSE
+        }
+      });
+    }
+
+    const submissionDateCount = await this.prisma.$queryRaw<{
+      submission_date_count: number;
+    }>`
+      SELECT COUNT(*) AS cnt
+      FROM submissions
+      WHERE name = ${name}
+      GROUP BY DATE(submittedAt)
+    `;
+
+    if (submissionDateCount.submission_date_count >= 10) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.HARD_WORKER
+        }
+      });
+    }
+
+    if (Number(user.averageTries) < 2) {
+      await this.prisma.userBadges.create({
+        data: {
+          name: name,
+          badge: Badge.ONE_SHOT_ONE_KILL
+        }
+      });
+    }
   }
 
   // 1. 특정 사람이 맞춘 문제 번호만 구하기
