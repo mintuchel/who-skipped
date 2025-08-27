@@ -110,13 +110,13 @@ export class UserService {
     }));
   }
 
-  async getUserBadges(name: string) {
+  async getUserBadges(name: string): Promise<Badge[]> {
     const userBadgesRecord = await this.prisma.userBadges.findMany({
       where: { name: name },
       select: { badge: true }
     });
 
-    const userBadges = userBadgesRecord?.map((record) => record.badge);
+    const userBadges = userBadgesRecord.map((record) => record.badge);
 
     return userBadges;
   }

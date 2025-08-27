@@ -6,6 +6,7 @@ import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { UserHeatMapInfoResponse } from "./dto/response/user-heatmap-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
 import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
+import { Badge } from "@prisma/client";
 
 @ApiTags("User")
 @Controller("users")
@@ -61,7 +62,7 @@ export class UserController {
 
   @Get("/:name/badges")
   @ApiOperation({ summary: "특정 유저 보유 뱃지 조회" })
-  async getUserBadges(@Param("name") name: string) {
+  async getUserBadges(@Param("name") name: string): Promise<Badge[]> {
     console.log("특정 유저 보유 뱃지 조회");
     return await this.userService.getUserBadges(name);
   }
