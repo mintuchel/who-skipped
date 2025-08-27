@@ -5,6 +5,7 @@ import { UserInfoResponse } from "./dto/response/user-info.dto";
 import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { UserHeatMapInfoResponse } from "./dto/response/user-heatmap-info.dto";
 import { JwtAuthGuard } from "src/auth/security/guard/jwt.guard";
+import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
 
 @ApiTags("User")
 @Controller("users")
@@ -47,5 +48,21 @@ export class UserController {
   async getUser(@Param("name") name: string): Promise<UserInfoResponse> {
     console.log("유저 조회");
     return await this.userService.getUser(name);
+  }
+
+  @Get("/:name/solved-tags")
+  @ApiOperation({ summary: "특정 유저 해결 문제 유형 조회" })
+  async getUserSolvedProblemTags(
+    @Param("name") name: string
+  ): Promise<UserSolvedProblemTagsInfoResponse[]> {
+    console.log("특정 유저 해결 문제 유형 조회");
+    return await this.userService.getUserSolvedProblemTags(name);
+  }
+
+  @Get("/:name/badges")
+  @ApiOperation({ summary: "특정 유저 보유 뱃지 조회" })
+  async getUserBadges(@Param("name") name: string) {
+    console.log("특정 유저 보유 뱃지 조회");
+    return await this.userService.getUserBadges(name);
   }
 }

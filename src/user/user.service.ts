@@ -5,6 +5,7 @@ import { UserGroupInfo } from "./dto/response/user-group-info.dto";
 import { JwtPayload } from "src/auth/security/payload/jwt.payload";
 import { UserHeatMapInfoResponse } from "./dto/response/user-heatmap-info.dto";
 import { Badge, Prisma } from "@prisma/client";
+import { UserSolvedProblemTagsInfoResponse } from "./dto/response/user-solved-problem-tags-info.dto";
 
 @Injectable()
 export class UserService {
@@ -84,6 +85,40 @@ export class UserService {
       submitDate: streak.date,
       submitCount: Number(streak.count)
     }));
+  }
+
+  async getUserSolvedProblemTags(
+    name: string
+  ): Promise<UserSolvedProblemTagsInfoResponse[]> {
+    const solvedProblemTagsRecord = await this.prisma.users.findUnique({
+      where: { name: name },
+      select: {
+        solvedProblemTags: true
+      }
+    });
+
+    // TypeScript는 JSON 타입 지원을 안해서 JSON 타입은 Object로 온다
+    // 따라서 as Record<string, number>를 통해 JSON 형태로 만들어 참조해야한다
+    const tags = solvedProblemTagsRecord?.solvedProblemTags as Record<
+      string,
+      number
+    >;
+
+    return Object.entries(tags).map(([tag, count]) => ({
+      tag,
+      count
+    }));
+  }
+
+  async getUserBadges(name: string) {
+    const userBadgesRecord = await this.prisma.userBadges.findMany({
+      where: { name: name },
+      select: { badge: true }
+    });
+
+    const userBadges = userBadgesRecord?.map((record) => record.badge);
+
+    return userBadges;
   }
 
   // 여기서 Promise.all로 streaks, averageTries, solvedProblemTags 모두 계산해서 업데이트
