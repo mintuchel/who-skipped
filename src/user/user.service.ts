@@ -279,32 +279,23 @@ export class UserService {
   // 2. 해당 문제들의 제출 내역 갯수 구하기
   // 3. AVG 함수로 평균내기
   private async updateUserAverageTries(name: string): Promise<void> {
-    // queryRaw의 결과는 배열이다.
-    // AVG의 결과는 string으로 매핑된다.
-    const averageTriesRecord = await this.prisma.$queryRaw<{
-      average_tries: string;
-    }>`
-      SELECT AVG(temp.cnt) AS average_tries
-      FROM (
-        SELECT problemId, COUNT(*) AS cnt
-        FROM submissions
-        WHERE problemId IN (
-          SELECT problemId
+    await this.prisma.$executeRaw`
+      UPDATE users
+      SET averageTries  = (
+        SELECT AVG(temp.cnt)
+        FROM (
+          SELECT problemId, COUNT(*) AS cnt
           FROM submissions
-          WHERE name = ${name} AND result = "ACCEPTED"
-        )
-        GROUP BY problemId
-      ) AS temp
+          WHERE problemId IN (
+            SELECT problemId
+            FROM submissions
+            WHERE name = ${name} AND result = "ACCEPTED"
+          ) AND result != "ACCEPTED"
+          GROUP BY problemId
+        ) AS temp
+      )
+      WHERE name = ${name}
     `;
-
-    const averageTries = Number(averageTriesRecord[0].average_tries);
-
-    await this.prisma.users.update({
-      where: { name: name },
-      data: {
-        averageTries: averageTries
-      }
-    });
   }
 
   // 특정 유저의 30일간의 맞은 문제유형 분석
@@ -312,7 +303,23 @@ export class UserService {
   // 그리고 prisma orm 인터페이스를 통해 update 구문까지 실행하니 추가적인 오버헤드 발생
   // 프로시져로 그냥 1번의 DB 연결로 계산할 수 있게 해보자
   private async updateUserSolvedProblemTags(name: string): Promise<void> {
-    await this.prisma
-      .$executeRaw`CALL updateUserSolvedProblemTagsProc(${name})`;
+    await this.prisma.$executeRaw`
+        UPDATE users
+        SET solvedProblemTags = (
+          SELECT JSON_OBJECTAGG(tag, count)
+          FROM (
+            SELECT problem_tags.tag AS tag, COUNT(*) AS count
+            FROM problems
+            JOIN problem_tags ON problems.id = problem_tags.problemId
+            WHERE problems.id IN (
+              SELECT problemId
+              FROM submissions
+              WHERE name = ${name} AND result = "ACCEPTED"
+            )
+            GROUP BY problem_tags.tag
+          ) AS temp
+        )
+        WHERE name = ${name}
+      `;
   }
 }
