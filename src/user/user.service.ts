@@ -308,44 +308,11 @@ export class UserService {
   }
 
   // 특정 유저의 30일간의 맞은 문제유형 분석
+  // 현재 방식은 서버 -> DB 간의 네트워크 비용이 2번 듬
+  // 그리고 prisma orm 인터페이스를 통해 update 구문까지 실행하니 추가적인 오버헤드 발생
+  // 프로시져로 그냥 1번의 DB 연결로 계산할 수 있게 해보자
   private async updateUserSolvedProblemTags(name: string): Promise<void> {
-    const userSolvedProblemTags = await this.prisma.$queryRaw<
-      {
-        tag: string;
-        count: number;
-      }[]
-    >`
-      SELECT problem_tags.tag AS tag, COUNT(*) AS count
-      FROM problems
-      JOIN problem_tags
-      ON problems.id = problem_tags.problemId
-      WHERE problems.id IN (
-        SELECT problemId
-        FROM submissions
-        WHERE name = ${name} AND result = "ACCEPTED"
-      )
-      GROUP BY problem_tags.tag
-    `;
-
-    // MEDIUM_INT 같은 특수 타입들은 매핑될때 BigInt로 매핑되어 Number로 형변환시켜주지 않으면 뒤에 n이 붙어나온다
-    const tags = userSolvedProblemTags.map((tagResults) => ({
-      tag: tagResults.tag,
-      count: Number(tagResults.count)
-    }));
-
-    const tagsAsJson = tags.reduce(
-      (acc, cur) => {
-        acc[cur.tag] = Number(cur.count);
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-
-    await this.prisma.users.update({
-      where: { name: name },
-      data: {
-        solvedProblemTags: tagsAsJson
-      }
-    });
+    await this.prisma
+      .$executeRaw`CALL updateUserSolvedProblemTagsProc(${name})`;
   }
 }
