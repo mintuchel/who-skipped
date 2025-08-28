@@ -69,11 +69,11 @@ export class GroupService {
 
     const groupMembers = await this.prisma.$queryRaw<
       GroupInfoResponse["members"]
-    >`SELECT u.name AS name , u.skippedCnt AS skippedCnt, gm.joinedAt AS joinedAt
-      FROM users AS u
-      JOIN group_memberships AS gm
-      ON u.id = gm.userId
-      WHERE gm.groupId = ${groupId}`;
+    >`SELECT users.name AS name , users.tier AS tier, users.averageTries as averageTries, group_memberships.joinedAt AS joinedAt
+      FROM users
+      JOIN group_memberships
+      ON users.id = group_memberships.userId
+      WHERE group_memberships.groupId = ${groupId}`;
 
     return {
       name: group.name,
@@ -109,21 +109,18 @@ export class GroupService {
       select: { id: true }
     });
 
-    // 이거 나중에 createMany로 바꿔보기
-    for (const user of users) {
-      await this.prisma.groupMemberships
-        .create({
+    // Promise all로 병렬적으로 진행
+    // 해당 인원들의 그룹 추가는 순서가 중요한 작업이 아니다
+    await Promise.all(
+      users.map((user) => {
+        return this.prisma.groupMemberships.create({
           data: {
-            user: { connect: { id: user.id } },
-            group: { connect: { id: groupId } }
-          }
-        })
-        .catch((err) => {
-          if (err.code !== "P2002") {
-            console.log("중복된 groupmembership 존재");
+            userId: user.id,
+            groupId: group.id
           }
         });
-    }
+      })
+    );
   }
 
   async deleteUsersFromGroup(
